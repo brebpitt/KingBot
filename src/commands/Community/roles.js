@@ -8,6 +8,8 @@ import {
     ButtonStyle,
     ChannelType
 } from 'discord.js';
+
+// Импортируем функции из roleButton.js
 import { 
     addRoleToStore, 
     removeRoleFromStore, 
@@ -54,7 +56,7 @@ export default {
             )
             .addStringOption(opt => opt
                 .setName("эмодзи")
-                .setDescription("Эмодзи для роли")
+                .setDescription("Эмодзи для роли (например: 🎮)")
                 .setRequired(false)
             )
         )
@@ -79,9 +81,19 @@ export default {
                 .setDescription("Пользователь для очистки")
                 .setRequired(true)
             )
+        )
+        .addSubcommand(sub => sub
+            .setName("инфо")
+            .setDescription("Показать информацию о пользователе")
+            .addUserOption(opt => opt
+                .setName("пользователь")
+                .setDescription("Пользователь для проверки")
+                .setRequired(true)
+            )
         ),
 
     async execute(interaction) {
+        // Проверка прав администратора
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return interaction.reply({ 
                 content: '❌ У вас нет прав администратора!', 
@@ -109,7 +121,10 @@ export default {
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
                 .setTitle('🎭 Выберите свою роль')
-                .setDescription('Выберите роль, которая вам подходит. Вы можете изменить выбор в любой момент.')
+                .setDescription(
+                    'Выберите роль, которая вам подходит.\n' +
+                    'Вы можете изменить выбор в любой момент.'
+                )
                 .setFooter({ text: 'Организации 01 | King Mobile' })
                 .setTimestamp();
 
@@ -140,11 +155,12 @@ export default {
 
             } else {
                 // Создаём меню
+                const isMulti = type === 'menu_multi';
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId('role_menu')
                     .setPlaceholder('Выберите роль...')
-                    .setMinValues(type === 'menu_single' ? 1 : 1)
-                    .setMaxValues(type === 'menu_multi' ? roles.length : 1);
+                    .setMinValues(1)
+                    .setMaxValues(isMulti ? roles.length : 1);
 
                 roles.forEach(r => {
                     selectMenu.addOptions({
@@ -179,6 +195,17 @@ export default {
             if (role.permissions.has(PermissionsBitField.Flags.Administrator)) {
                 return interaction.reply({
                     content: '❌ Нельзя добавлять административные роли!',
+                    ephemeral: true
+                });
+            }
+
+            // Проверяем, может ли бот управлять этой ролью
+            const botMember = await interaction.guild.members.fetch(interaction.client.user.id);
+            const botHighestRole = botMember.roles.highest;
+            
+            if (botHighestRole.position <= role.position) {
+                return interaction.reply({
+                    content: `❌ Бот не может управлять ролью **${role.name}**! Убедитесь, что роль бота находится выше этой роли.`,
                     ephemeral: true
                 });
             }
@@ -236,9 +263,13 @@ export default {
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
                 .setTitle('📋 Список ролей в системе')
-                .setDescription(roles.map((r, i) => 
-                    `${i + 1}. <@&${r.id}> ${r.emoji} - ${r.description || 'Нет описания'}`
-                ).join('\n'))
+                .setDescription(
+                    roles.map((r, i) => {
+                        const roleObj = interaction.guild.roles.cache.get(r.id);
+                        const roleName = roleObj ? roleObj.name : '❌ Удалена';
+                        return `${i + 1}. ${r.emoji} **${roleName}** - ${r.description || 'Нет описания'}`;
+                    }).join('\n')
+                )
                 .setFooter({ text: `Всего ролей: ${roles.length}` })
                 .setTimestamp();
 
@@ -249,6 +280,14 @@ export default {
         else if (subcommand === 'очистить') {
             const user = interaction.options.getUser('пользователь');
             const member = await interaction.guild.members.fetch(user.id);
+
+            // Проверяем, не админ ли пользователь
+            if (member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({
+                    content: '❌ Нельзя очищать роли у администратора!',
+                    ephemeral: true
+                });
+            }
 
             const rolesToRemove = member.roles.cache.filter(r => 
                 r.id !== interaction.guild.id && 
@@ -264,10 +303,74 @@ export default {
 
             await member.roles.remove(rolesToRemove);
             
-            await interaction.reply({
-                content: `✅ У пользователя ${user.tag} удалены все роли (${rolesToRemove.size} шт.)`,
-                ephemeral: true
-            });
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('🗑️ Роли очищены')
+                .setDescription(`У пользователя **${user.tag}** удалены все роли`)
+                .addFields(
+                    { name: '👤 ID', value: user.id, inline: true },
+                    { name: '📊 Удалено ролей', value: `${rolesToRemove.size}`, inline: true }
+                )
+                .setFooter({ text: 'Организации 01 | King Mobile' })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        // --- ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ ---
+        else if (subcommand === 'инфо') {
+            const user = interaction.options.getUser('пользователь');
+            const member = await interaction.guild.members.fetch(user.id);
+
+            const allRoles = await getRolesFromDB(interaction.guildId);
+            const userRoles = member.roles.cache.filter(r => 
+                allRoles.some(ar => ar.id === r.id)
+            );
+
+            const embed = new EmbedBuilder()
+                .setColor('#5865F2')
+                .setTitle(`📊 Информация о ${user.tag}`)
+                .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: '👤 ID', value: user.id, inline: true },
+                    { name: '📅 Дата регистрации', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
+                    { name: '📥 Зашёл на сервер', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true }
+                );
+
+            if (userRoles.size > 0) {
+                embed.addFields({
+                    name: '🎭 Роли в системе',
+                    value: userRoles.map(r => `• ${r.name}`).join('\n'),
+                    inline: false
+                });
+            } else {
+                embed.addFields({
+                    name: '🎭 Роли в системе',
+                    value: 'Нет ролей',
+                    inline: false
+                });
+            }
+
+            // Показываем все роли пользователя
+            if (member.roles.cache.size > 1) {
+                const allUserRoles = member.roles.cache
+                    .filter(r => r.id !== interaction.guild.id)
+                    .map(r => `• ${r.name}`)
+                    .join('\n');
+                
+                if (allUserRoles.length < 1024) {
+                    embed.addFields({
+                        name: '📋 Все роли пользователя',
+                        value: allUserRoles || 'Нет ролей',
+                        inline: false
+                    });
+                }
+            }
+
+            embed.setFooter({ text: 'Организации 01 | King Mobile' })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         }
     }
 };
