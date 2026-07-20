@@ -12,12 +12,12 @@ const FINE_PERCENTAGE = 0.1;
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('rob')
-        .setDescription('Attempt to rob another user (very risky)')
+        .setName('ограбить')
+        .setDescription('Попытаться ограбить другого пользователя (очень рискованно)')
         .addUserOption(option =>
             option
-                .setName('user')
-                .setDescription('User to rob')
+                .setName('пользователь')
+                .setDescription('Пользователь для ограбления')
                 .setRequired(true)
         ),
 
@@ -26,7 +26,7 @@ export default {
         if (!deferred) return;
             
             const robberId = interaction.user.id;
-            const victimUser = interaction.options.getUser("user");
+            const victimUser = interaction.options.getUser("пользователь");
             const guildId = interaction.guildId;
             const now = Date.now();
 
@@ -34,7 +34,7 @@ export default {
                 throw createError(
                     "Cannot rob self",
                     ErrorTypes.VALIDATION,
-                    "You cannot rob yourself.",
+                    "Вы не можете ограбить самого себя.",
                     { robberId, victimId: victimUser.id }
                 );
             }
@@ -43,7 +43,7 @@ export default {
                 throw createError(
                     "Cannot rob bot",
                     ErrorTypes.VALIDATION,
-                    "You cannot rob a bot.",
+                    "Вы не можете ограбить бота.",
                     { victimId: victimUser.id, isBot: true }
                 );
             }
@@ -55,7 +55,7 @@ export default {
                 throw createError(
                     "Failed to load economy data",
                     ErrorTypes.DATABASE,
-                    "Failed to load economy data. Please try again later.",
+                    "Не удалось загрузить экономические данные. Пожалуйста, попробуйте позже.",
                     { robberId: !!robberData, victimId: !!victimData, guildId }
                 );
             }
@@ -70,7 +70,7 @@ export default {
                 throw createError(
                     "Robbery cooldown active",
                     ErrorTypes.RATE_LIMIT,
-                    `You need to lay low. Wait **${hours}h ${minutes}m** before attempting another robbery.`,
+                    `Вам нужно залечь на дно. Подождите **${hours}ч ${minutes}м** перед следующей попыткой ограбления.`,
                     { remaining, hours, minutes, cooldownType: 'rob' }
                 );
             }
@@ -79,7 +79,7 @@ export default {
                 throw createError(
                     "Victim too poor",
                     ErrorTypes.VALIDATION,
-                    `${victimUser.username} is too poor. They need at least $500 cash to be worth robbing.`,
+                    `${victimUser.username} слишком бедный. У него должно быть как минимум $500 наличными, чтобы его грабить.`,
                     { victimWallet: victimData.wallet, required: 500 }
                 );
             }
@@ -93,8 +93,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         warningEmbed(
-                            'Robbery Blocked',
-                            `${victimUser.username} was prepared! Your attempt failed because they own a **Personal Safe**. You got away clean but didn't gain anything.`
+                            'Ограбление заблокировано',
+                            `${victimUser.username} был готов! Ваша попытка провалилась, потому что у него есть **Персональный сейф**. Вы ушли безнаказанно, но ничего не получили.`
                         )
                     ],
                 });
@@ -110,8 +110,8 @@ export default {
                 victimData.wallet = (victimData.wallet || 0) - amountStolen;
 
                 resultEmbed = successEmbed(
-                    'Robbery Successful',
-                    `You successfully stole **$${amountStolen.toLocaleString()}** from ${victimUser.username}!`
+                    'Ограбление успешно',
+                    `Вы успешно украли **$${amountStolen.toLocaleString()}** у ${victimUser.username}!`
                 );
             } else {
                 const fineAmount = Math.floor((robberData.wallet || 0) * FINE_PERCENTAGE);
@@ -124,8 +124,8 @@ export default {
 
                 resultEmbed = buildUserErrorEmbed(
                     'unknown',
-                    `You failed the robbery and were caught! You were fined **$${fineAmount.toLocaleString()}** of your own cash.`,
-                    { titleOverride: 'Robbery Failed' }
+                    `Вы провалили ограбление и были пойманы! Вас оштрафовали на **$${fineAmount.toLocaleString()}** ваших собственных денег.`,
+                    { titleOverride: 'Ограбление провалено' }
                 );
             }
 
@@ -137,18 +137,18 @@ export default {
             resultEmbed
                 .addFields(
                     {
-                        name: `Your New Cash (${interaction.user.username})`,
+                        name: `Ваши новые деньги (${interaction.user.username})`,
                         value: `$${robberData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: `Victim's New Cash (${victimUser.username})`,
+                        name: `Новые деньги жертвы (${victimUser.username})`,
                         value: `$${victimData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                 )
-                .setFooter({ text: `Next robbery available in ${Math.ceil(ROB_COOLDOWN / (60 * 60 * 1000))} hours.` });
+                .setFooter({ text: `Следующее ограбление доступно через ${Math.ceil(ROB_COOLDOWN / (60 * 60 * 1000))} часов.` });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [resultEmbed] });
-    }, { command: 'rob' })
+    }, { command: 'ограбить' })
 };

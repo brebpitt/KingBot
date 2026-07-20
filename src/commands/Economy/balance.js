@@ -8,11 +8,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('balance')
-        .setDescription("Check your or someone else's balance")
+        .setDescription("Проверить свой баланс или баланс другого пользователя")
         .addUserOption(option =>
             option
                 .setName('user')
-                .setDescription('User to check balance for')
+                .setDescription('Пользователь, чей баланс проверить')
                 .setRequired(false)
         ),
 
@@ -30,9 +30,9 @@ export default {
 
         if (targetUser.bot) {
             throw createError(
-                "Bot user queried for balance",
+                "Запрос баланса бота",
                 ErrorTypes.VALIDATION,
-                "Bots don't have an economy balance."
+                "У ботов нет экономического баланса."
             );
         }
 
@@ -42,9 +42,9 @@ export default {
 
         if (!userData) {
             throw createError(
-                "Failed to load economy data",
+                "Не удалось загрузить данные экономики",
                 ErrorTypes.DATABASE,
-                "Failed to load economy data. Please try again later.",
+                "Не удалось загрузить данные экономики. Пожалуйста, попробуйте позже.",
                 { userId: targetUser.id, guildId }
             );
         }
@@ -55,28 +55,28 @@ export default {
         const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `${targetUser.username}'s Balance`,
-                description: `Here is the current financial status for ${targetUser.username}.`,
+                title: `Баланс ${targetUser.username}`,
+                description: `Текущее финансовое состояние ${targetUser.username}.`,
             })
                 .addFields(
                     {
-                        name: "💵 Cash",
+                        name: "💵 Наличные",
                         value: `$${wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 Bank",
+                        name: "🏦 Банк",
                         value: `$${bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "💰 Total",
+                        name: "💰 Итого",
                         value: `$${(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
                 )
                 .setFooter({
-                    text: `Requested by ${interaction.user.tag}`,
+                    text: `Запрошено ${interaction.user.tag}`,
                     iconURL: interaction.user.displayAvatarURL(),
                 });
 

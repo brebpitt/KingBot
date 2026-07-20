@@ -14,8 +14,8 @@ const PREMIUM_BONUS_PERCENTAGE = 0.1;
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('daily')
-        .setDescription('Claim your daily cash reward'),
+        .setName('ежедневно')
+        .setDescription('Получить ежедневную денежную награду'),
 
     execute: withErrorHandling(async (interaction, config, client) => {
         const deferred = await InteractionHelper.safeDefer(interaction);
@@ -25,15 +25,15 @@ export default {
             const guildId = interaction.guildId;
             const now = Date.now();
 
-            logger.debug(`[ECONOMY] Daily claimed started for ${userId}`, { userId, guildId });
+            logger.debug(`[ECONOMY] Ежедневная награда запущена для ${userId}`, { userId, guildId });
 
             const userData = await getEconomyData(client, guildId, userId);
             
             if (!userData) {
                 throw createError(
-                    "Failed to load economy data for daily",
+                    "Не удалось загрузить экономические данные для ежедневной награды",
                     ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
+                    "Не удалось загрузить ваши экономические данные. Пожалуйста, попробуйте позже.",
                     { userId, guildId }
                 );
             }
@@ -43,9 +43,9 @@ export default {
             if (now < lastDaily + DAILY_COOLDOWN) {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
                 throw createError(
-                    "Daily cooldown active",
+                    "Активен кулдаун ежедневной награды",
                     ErrorTypes.RATE_LIMIT,
-                    `You need to wait before claiming daily again. Try again in **${formatDuration(timeRemaining)}**.`,
+                    `Вам нужно подождать перед получением ежедневной награды. Попробуйте снова через **${formatDuration(timeRemaining)}**.`,
                     { timeRemaining, cooldownType: 'daily' }
                 );
             }
@@ -66,7 +66,7 @@ export default {
                     DAILY_AMOUNT * PREMIUM_BONUS_PERCENTAGE,
                 );
                 earned += bonusAmount;
-                bonusMessage = `\n✨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
+                bonusMessage = `\n✨ **Премиум бонус:** +$${bonusAmount.toLocaleString()}`;
                 hasPremiumRole = true;
             }
 
@@ -75,7 +75,7 @@ export default {
 
             await setEconomyData(client, guildId, userId, userData);
 
-            logger.info(`[ECONOMY_TRANSACTION] Daily claimed`, {
+            logger.info(`[ECONOMY_TRANSACTION] Ежедневная награда получена`, {
                 userId,
                 guildId,
                 amount: earned,
@@ -85,20 +85,20 @@ export default {
             });
 
             const embed = successEmbed(
-                "✅ Daily Claimed!",
-                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`
+                "✅ Ежедневная награда получена!",
+                `Вы получили ежедневные **$${earned.toLocaleString()}**!${bonusMessage}`
             )
                 .addFields({
-                    name: "New Cash Balance",
+                    name: "Новый баланс",
                     value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
                 .setFooter({
                     text: hasPremiumRole
-                        ? `Next claim in 24 hours. (Premium Active)`
-                        : `Next claim in 24 hours.`,
+                        ? `Следующая награда через 24 часа. (Премиум активен)`
+                        : `Следующая награда через 24 часа.`,
                 });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-    }, { command: 'daily' })
+    }, { command: 'ежедневно' })
 };
