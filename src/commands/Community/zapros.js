@@ -168,7 +168,7 @@ export default {
         // Отправляем ответ ТОЛЬКО пользователю, вызвавшему команду
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [userEmbed],
-            ephemeral: true
+            ephemeral: false
         });
 
         logger.info(`Заявка на роль создана`, {
