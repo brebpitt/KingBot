@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
-const ADMIN_CHANNEL_ID = '1523639667952582666';
+const ADMIN_CHANNEL_ID = '1528732465747857438';
 const ADMIN_ROLE_ID = '1510803430166495295';
 const LOG_CHANNEL_ID = '1523639667952582666';
 
