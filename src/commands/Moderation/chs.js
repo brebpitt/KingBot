@@ -3,9 +3,9 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
-const MODERATION_CHANNEL_ID = 'ВАШ_ID_КАНАЛА_ДЛЯ_ЧС';
-const ADMIN_ROLE_ID = 'ВАШ_ID_РОЛИ_АДМИНА';
-const LOG_CHANNEL_ID = 'ВАШ_ID_КАНАЛА_ЛОГОВ';
+const MODERATION_CHANNEL_ID = '1528870028449939568';
+const ADMIN_ROLE_ID = '1510803547707412636';
+const LOG_CHANNEL_ID = '1528553736929284197';
 
 // ===== ВИДЫ ЧС =====
 const CHS_TYPES = {
