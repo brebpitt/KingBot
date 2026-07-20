@@ -13,25 +13,25 @@ const CHS_TYPES = {
         label: 'ЧСЛ', 
         emoji: '🔴', 
         color: Colors.Red,
-        description: 'Чрезвычайная ситуация локального уровня'
+        description: 'Черный Список Лидеров'
     },
     'ЧСП': { 
         label: 'ЧСП', 
         emoji: '🟠', 
         color: Colors.Orange,
-        description: 'Чрезвычайная ситуация природного характера'
+        description: 'Черный Список Проекта'
     },
     'ЧСГОС': { 
         label: 'ЧСГОС', 
         emoji: '🟡', 
         color: Colors.Gold,
-        description: 'Чрезвычайная ситуация государственного уровня'
+        description: 'Черный Список ГОС'
     },
     'ЧССС': { 
         label: 'ЧССС', 
         emoji: '🟢', 
         color: Colors.Green,
-        description: 'Чрезвычайная ситуация социального характера'
+        description: 'Черный Список Старшего Состава'
     }
 };
 
