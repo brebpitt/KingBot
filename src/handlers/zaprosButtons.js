@@ -2,12 +2,6 @@ import { MessageFlags, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { successEmbed, errorEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError, replyUserError } from '../utils/errorHandler.js';
-import { 
-    approveButtonHandler,
-    rejectButtonHandler,
-    infoButtonHandler,
-    dmButtonHandler
-} from './handlers/zaprosButtons.js';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
 const ADMIN_CHANNEL_ID = '1528732465747857438';
@@ -20,7 +14,7 @@ const FACTIONS = [
     { label: '🔐 ФСБ', value: 'fsb', emoji: '🔐' },
     { label: '🚔 МВД', value: 'mvd', emoji: '🚔' },
     { label: '🚦 ГИБДД', value: 'gibdd', emoji: '🚦' },
-    { label: '⚔️ ВЧ', value: 'vch', emoji: '⚔️' },
+    { label: '🪖 ВЧ', value: 'vch', emoji: '⚔️' },
     { label: '🏥 Центральная Больница', value: 'hospital', emoji: '🏥' },
     { label: '📺 СМИ', value: 'media', emoji: '📺' },
     { label: '🔫 Арзамасская ОПГ', value: 'arzamas', emoji: '🔫' },
