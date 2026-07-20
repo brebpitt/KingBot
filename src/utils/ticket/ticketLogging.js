@@ -9,11 +9,12 @@ import {
   resolveUserAuthor,
 } from '../logging/logEmbeds.js';
 
+// Логирование событий тикета
 export async function logTicketEvent({ client, guildId, event }) {
   try {
     const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null);
     if (!guild) {
-      logger.warn(`logTicketEvent invoked without valid guild: ${guildId}`);
+      logger.warn(`logTicketEvent вызван без действительной гильдии: ${guildId}`);
       return;
     }
 
@@ -26,13 +27,13 @@ export async function logTicketEvent({ client, guildId, event }) {
 
     const channel = guild.channels.cache.get(logChannelId) || await guild.channels.fetch(logChannelId).catch(() => null);
     if (!channel) {
-      logger.warn(`Ticket log channel not found: ${logChannelId} for event type: ${event.type}`);
+      logger.warn(`Канал логов тикетов не найден: ${logChannelId} для типа события: ${event.type}`);
       return;
     }
 
     const permissions = channel.permissionsFor(guild.members.me);
     if (!permissions.has(['SendMessages', 'EmbedLinks'])) {
-      logger.warn(`Missing permissions in ticket log channel: ${logChannelId}`);
+      logger.warn(`Отсутствуют разрешения в канале логов тикетов: ${logChannelId}`);
       return;
     }
 
@@ -45,12 +46,13 @@ export async function logTicketEvent({ client, guildId, event }) {
     }
 
     await channel.send(messageOptions);
-    logger.info(`Ticket event logged: ${event.type} in guild ${guildId}`);
+    logger.info(`Событие тикета залогировано: ${event.type} в гильдии ${guildId}`);
   } catch (error) {
-    logger.error('Error logging ticket event:', error);
+    logger.error('Ошибка логирования события тикета:', error);
   }
 }
 
+// Логирование отзыва о тикете
 export async function logTicketFeedback({
   client,
   guildId,
@@ -76,6 +78,7 @@ export async function logTicketFeedback({
   });
 }
 
+// Получение ID канала для логирования в зависимости от типа события
 function getLogChannelForEventType(config, eventType) {
   switch (eventType) {
     case 'transcript':
@@ -97,21 +100,23 @@ function getLogChannelForEventType(config, eventType) {
   }
 }
 
+// Стили оформления для разных типов событий тикета
 const TICKET_EVENT_STYLES = {
-  open: { color: 0x5865F2, title: 'Ticket Created' },
-  close: { color: 0xED4245, title: 'Ticket Closed' },
-  delete: { color: 0x8b0000, title: 'Ticket Deleted' },
-  claim: { color: 0x5865F2, title: 'Ticket Claimed' },
-  unclaim: { color: 0xFAA61A, title: 'Ticket Unclaimed' },
-  priority: { color: 0x9b59b6, title: 'Priority Updated' },
-  transcript: { color: 0x57F287, title: 'Transcript Generated' },
-  feedback: { color: 0x57F287, title: 'Feedback Received' },
+  open: { color: 0x5865F2, title: 'Тикет создан' },
+  close: { color: 0xED4245, title: 'Тикет закрыт' },
+  delete: { color: 0x8b0000, title: 'Тикет удален' },
+  claim: { color: 0x5865F2, title: 'Тикет назначен' },
+  unclaim: { color: 0xFAA61A, title: 'Назначение снято' },
+  priority: { color: 0x9b59b6, title: 'Приоритет обновлен' },
+  transcript: { color: 0x57F287, title: 'Транскрипт создан' },
+  feedback: { color: 0x57F287, title: 'Отзыв получен' },
 };
 
+// Создание embed-сообщения для лога события тикета
 async function createTicketLogEmbed(guild, event) {
-  const style = TICKET_EVENT_STYLES[event.type] || { color: 0x95a5a6, title: 'Ticket Event' };
+  const style = TICKET_EVENT_STYLES[event.type] || { color: 0x95a5a6, title: 'Событие тикета' };
   const ticketNumber = event.ticketNumber || event.ticketId;
-  const ticketRef = ticketNumber ? `#${ticketNumber}` : 'Unknown';
+  const ticketRef = ticketNumber ? `#${ticketNumber}` : 'Неизвестно';
   const channelMention = event.ticketId ? `<#${event.ticketId}>` : null;
   const executorMention = event.executorId ? `<@${event.executorId}>` : null;
   const userMention = event.userId ? `<@${event.userId}>` : null;
@@ -119,42 +124,42 @@ async function createTicketLogEmbed(guild, event) {
   let inlineFields = [];
   let fields = [];
   let author = null;
-  let footer = { text: 'TitanBot Ticketing' };
+  let footer = { text: 'TitanBot Тикеты' };
 
   switch (event.type) {
     case 'open':
       author = await resolveUserAuthor(guild.client, event.userId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Creator', value: userMention || 'Unknown', inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Создатель', value: userMention || 'Неизвестно', inline: true },
       ];
       if (channelMention) {
-        inlineFields.push({ name: 'Channel', value: channelMention, inline: true });
+        inlineFields.push({ name: 'Канал', value: channelMention, inline: true });
       }
       if (event.reason) {
-        fields.push({ name: 'Reason', value: String(event.reason).slice(0, 1024), inline: false });
+        fields.push({ name: 'Причина', value: String(event.reason).slice(0, 1024), inline: false });
       }
       break;
 
     case 'close':
       author = await resolveUserAuthor(guild.client, event.executorId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Closed by', value: executorMention || 'Unknown', inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Закрыл', value: executorMention || 'Неизвестно', inline: true },
       ];
       if (channelMention) {
-        inlineFields.push({ name: 'Channel', value: channelMention, inline: true });
+        inlineFields.push({ name: 'Канал', value: channelMention, inline: true });
       }
       if (event.reason) {
-        fields.push({ name: 'Reason', value: String(event.reason).slice(0, 1024), inline: false });
+        fields.push({ name: 'Причина', value: String(event.reason).slice(0, 1024), inline: false });
       }
       break;
 
     case 'delete':
       author = await resolveUserAuthor(guild.client, event.executorId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Deleted by', value: executorMention || 'Unknown', inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Удалил', value: executorMention || 'Неизвестно', inline: true },
       ];
       break;
 
@@ -162,10 +167,10 @@ async function createTicketLogEmbed(guild, event) {
     case 'unclaim':
       author = await resolveUserAuthor(guild.client, event.executorId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
         {
-          name: event.type === 'claim' ? 'Claimed by' : 'Unclaimed by',
-          value: executorMention || 'Unknown',
+          name: event.type === 'claim' ? 'Назначил' : 'Снял назначение',
+          value: executorMention || 'Неизвестно',
           inline: true,
         },
       ];
@@ -175,30 +180,30 @@ async function createTicketLogEmbed(guild, event) {
       const priorityEmojis = { none: '⚪', low: '🔵', medium: '🟢', high: '🟡', urgent: '🔴' };
       const priorityLabel = event.priority
         ? `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase()}${event.priority.slice(1)}`
-        : 'Unknown';
+        : 'Неизвестно';
       author = await resolveUserAuthor(guild.client, event.executorId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Priority', value: priorityLabel, inline: true },
-        { name: 'Updated by', value: executorMention || 'Unknown', inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Приоритет', value: priorityLabel, inline: true },
+        { name: 'Обновил', value: executorMention || 'Неизвестно', inline: true },
       ];
       break;
     }
 
     case 'transcript':
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Creator', value: userMention || 'Unknown', inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Создатель', value: userMention || 'Неизвестно', inline: true },
       ];
       if (event.metadata?.messageCount) {
-        inlineFields.push({ name: 'Messages', value: String(event.metadata.messageCount), inline: true });
+        inlineFields.push({ name: 'Сообщений', value: String(event.metadata.messageCount), inline: true });
       }
       if (event.metadata?.duration) {
-        fields.push({ name: 'Duration', value: String(event.metadata.duration), inline: false });
+        fields.push({ name: 'Длительность', value: String(event.metadata.duration), inline: false });
       }
       if (event.metadata?.subject || event.reason) {
         fields.push({
-          name: 'Subject',
+          name: 'Тема',
           value: String(event.metadata?.subject || event.reason).slice(0, 1024),
           inline: false,
         });
@@ -208,17 +213,17 @@ async function createTicketLogEmbed(guild, event) {
     case 'feedback': {
       const rating = event.metadata?.rating ?? event.rating;
       const comment = event.metadata?.comment;
-      const ratingDisplay = formatRatingStars(rating) || 'No rating';
+      const ratingDisplay = formatRatingStars(rating) || 'Нет оценки';
 
       author = await resolveUserAuthor(guild.client, event.userId);
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
-        { name: 'Rating', value: ratingDisplay, inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
+        { name: 'Оценка', value: ratingDisplay, inline: true },
       ];
 
       if (comment) {
         fields.push({
-          name: 'Comment',
+          name: 'Комментарий',
           value: String(comment).slice(0, 1024),
           inline: false,
         });
@@ -228,10 +233,10 @@ async function createTicketLogEmbed(guild, event) {
 
     default:
       inlineFields = [
-        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Тикет', value: ticketRef, inline: true },
       ];
       if (event.reason) {
-        fields.push({ name: 'Details', value: String(event.reason).slice(0, 1024), inline: false });
+        fields.push({ name: 'Детали', value: String(event.reason).slice(0, 1024), inline: false });
       }
   }
 
@@ -246,6 +251,7 @@ async function createTicketLogEmbed(guild, event) {
   });
 }
 
+// Получение конфигурации логирования тикетов
 export async function getTicketLoggingConfig(client, guildId) {
   const config = await getGuildConfig(client, guildId);
   return {
@@ -255,11 +261,12 @@ export async function getTicketLoggingConfig(client, guildId) {
   };
 }
 
+// Проверка валидности канала для логирования
 export function validateLogChannel(channel, botMember) {
   if (!channel || channel.type !== ChannelType.GuildText) {
     return {
       valid: false,
-      error: 'Channel must be a text channel.',
+      error: 'Канал должен быть текстовым каналом.',
     };
   }
 
@@ -271,10 +278,9 @@ export function validateLogChannel(channel, botMember) {
   if (missing.length > 0) {
     return {
       valid: false,
-      error: `Missing permissions: ${missing.join(', ')}`,
+      error: `Отсутствуют разрешения: ${missing.join(', ')}`,
     };
   }
 
   return { valid: true };
-}
-
+  }
