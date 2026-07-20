@@ -8,6 +8,12 @@ import {
     ButtonStyle,
     ChannelType
 } from 'discord.js';
+import { 
+    addRoleToStore, 
+    removeRoleFromStore, 
+    getButtonStyleFromColor,
+    getRolesFromDB 
+} from '../handlers/roleButton.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -46,6 +52,11 @@ export default {
                 .setDescription("Описание роли")
                 .setRequired(false)
             )
+            .addStringOption(opt => opt
+                .setName("эмодзи")
+                .setDescription("Эмодзи для роли")
+                .setRequired(false)
+            )
         )
         .addSubcommand(sub => sub
             .setName("удалить")
@@ -55,6 +66,10 @@ export default {
                 .setDescription("Роль для удаления")
                 .setRequired(true)
             )
+        )
+        .addSubcommand(sub => sub
+            .setName("список")
+            .setDescription("Показать все роли в системе")
         )
         .addSubcommand(sub => sub
             .setName("очистить")
@@ -67,7 +82,6 @@ export default {
         ),
 
     async execute(interaction) {
-        // Проверка прав
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return interaction.reply({ 
                 content: '❌ У вас нет прав администратора!', 
@@ -81,6 +95,14 @@ export default {
         if (subcommand === 'создать') {
             const channel = interaction.options.getChannel('канал');
             const type = interaction.options.getString('тип');
+            const roles = await getRolesFromDB(interaction.guildId);
+
+            if (!roles || roles.length === 0) {
+                return interaction.reply({
+                    content: '❌ Сначала добавьте роли командой `/роли добавить`',
+                    ephemeral: true
+                });
+            }
 
             await interaction.deferReply({ ephemeral: true });
 
@@ -91,47 +113,33 @@ export default {
                 .setFooter({ text: 'Организации 01 | King Mobile' })
                 .setTimestamp();
 
-            let row;
+            let components = [];
 
             if (type === 'buttons') {
-                // Панель с кнопками
-                const roles = await getRolesFromDB(interaction.guildId);
-                if (!roles || roles.length === 0) {
-                    return interaction.editReply({
-                        content: '❌ Сначала добавьте роли командой `/роли добавить`'
-                    });
-                }
+                // Создаём кнопки для каждой роли
+                const buttonRows = [];
+                let currentRow = new ActionRowBuilder();
 
-                const buttons = roles.map(r => 
-                    new ButtonBuilder()
-                        .setCustomId(`role_${r.id}`)
-                        .setLabel(r.name)
-                        .setStyle(r.color || ButtonStyle.Primary)
-                );
+                roles.forEach((role, index) => {
+                    const button = new ButtonBuilder()
+                        .setCustomId(`role_${role.id}`)
+                        .setLabel(role.name.length > 80 ? role.name.slice(0, 77) + '...' : role.name)
+                        .setStyle(getButtonStyleFromColor(role.color))
+                        .setEmoji(role.emoji || '🎭');
 
-                // Разбиваем по 5 кнопок в ряд
-                const rows = [];
-                for (let i = 0; i < buttons.length; i += 5) {
-                    const row = new ActionRowBuilder();
-                    buttons.slice(i, i + 5).forEach(btn => row.addComponents(btn));
-                    rows.push(row);
-                }
+                    currentRow.addComponents(button);
 
-                await channel.send({ embeds: [embed], components: rows });
-                await interaction.editReply({ 
-                    content: `✅ Панель с кнопками создана в канале ${channel}!`,
-                    ephemeral: true 
+                    // Если в ряду 5 кнопок или это последняя роль
+                    if (currentRow.components.length === 5 || index === roles.length - 1) {
+                        buttonRows.push(currentRow);
+                        currentRow = new ActionRowBuilder();
+                    }
                 });
 
-            } else {
-                // Панель с меню
-                const roles = await getRolesFromDB(interaction.guildId);
-                if (!roles || roles.length === 0) {
-                    return interaction.editReply({
-                        content: '❌ Сначала добавьте роли командой `/роли добавить`'
-                    });
-                }
+                components = buttonRows;
 
+            } else {
+                // Создаём меню
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId('role_menu')
                     .setPlaceholder('Выберите роль...')
@@ -140,51 +148,101 @@ export default {
 
                 roles.forEach(r => {
                     selectMenu.addOptions({
-                        label: r.name,
+                        label: r.name.length > 100 ? r.name.slice(0, 97) + '...' : r.name,
                         value: r.id,
-                        description: r.description || `Роль ${r.name}`,
+                        description: r.description ? r.description.slice(0, 100) : `Роль ${r.name}`,
                         emoji: r.emoji || '🎭'
                     });
                 });
 
-                const row = new ActionRowBuilder().addComponents(selectMenu);
-                await channel.send({ embeds: [embed], components: [row] });
-                
-                await interaction.editReply({ 
-                    content: `✅ Панель с меню создана в канале ${channel}!`,
-                    ephemeral: true 
-                });
+                components = [new ActionRowBuilder().addComponents(selectMenu)];
             }
+
+            await channel.send({ 
+                embeds: [embed], 
+                components: components 
+            });
+            
+            await interaction.editReply({ 
+                content: `✅ Панель ролей создана в канале ${channel}!`,
+                ephemeral: true 
+            });
         }
 
         // --- ДОБАВЛЕНИЕ РОЛИ ---
         else if (subcommand === 'добавить') {
             const role = interaction.options.getRole('роль');
             const description = interaction.options.getString('описание') || '';
+            const emoji = interaction.options.getString('эмодзи') || '🎭';
 
-            await addRoleToDB(interaction.guildId, {
+            // Проверяем, не админская ли роль
+            if (role.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({
+                    content: '❌ Нельзя добавлять административные роли!',
+                    ephemeral: true
+                });
+            }
+
+            const added = await addRoleToStore(interaction.guildId, {
                 id: role.id,
                 name: role.name,
-                color: getButtonStyleFromColor(role.color),
+                color: role.color,
                 description: description,
-                emoji: '🎭'
+                emoji: emoji
             });
 
-            await interaction.reply({
-                content: `✅ Роль **${role.name}** добавлена в систему!`,
-                ephemeral: true
-            });
+            if (added) {
+                await interaction.reply({
+                    content: `✅ Роль **${role.name}** добавлена в систему!`,
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: `ℹ️ Роль **${role.name}** уже есть в системе!`,
+                    ephemeral: true
+                });
+            }
         }
 
         // --- УДАЛЕНИЕ РОЛИ ---
         else if (subcommand === 'удалить') {
             const role = interaction.options.getRole('роль');
-            await removeRoleFromDB(interaction.guildId, role.id);
+            const removed = await removeRoleFromStore(interaction.guildId, role.id);
 
-            await interaction.reply({
-                content: `✅ Роль **${role.name}** удалена из системы!`,
-                ephemeral: true
-            });
+            if (removed) {
+                await interaction.reply({
+                    content: `✅ Роль **${role.name}** удалена из системы!`,
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: `ℹ️ Роль **${role.name}** не найдена в системе!`,
+                    ephemeral: true
+                });
+            }
+        }
+
+        // --- СПИСОК РОЛЕЙ ---
+        else if (subcommand === 'список') {
+            const roles = await getRolesFromDB(interaction.guildId);
+            
+            if (!roles || roles.length === 0) {
+                return interaction.reply({
+                    content: 'ℹ️ В системе нет добавленных ролей.',
+                    ephemeral: true
+                });
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor('#5865F2')
+                .setTitle('📋 Список ролей в системе')
+                .setDescription(roles.map((r, i) => 
+                    `${i + 1}. <@&${r.id}> ${r.emoji} - ${r.description || 'Нет описания'}`
+                ).join('\n'))
+                .setFooter({ text: `Всего ролей: ${roles.length}` })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         // --- ОЧИСТКА РОЛЕЙ ПОЛЬЗОВАТЕЛЯ ---
@@ -192,10 +250,9 @@ export default {
             const user = interaction.options.getUser('пользователь');
             const member = await interaction.guild.members.fetch(user.id);
 
-            // Получаем все роли, кроме @everyone и административных
             const rolesToRemove = member.roles.cache.filter(r => 
-                r.id !== interaction.guild.id && // не @everyone
-                !r.permissions.has(PermissionsBitField.Flags.Administrator) // не админские
+                r.id !== interaction.guild.id && 
+                !r.permissions.has(PermissionsBitField.Flags.Administrator)
             );
 
             if (rolesToRemove.size === 0) {
@@ -214,40 +271,3 @@ export default {
         }
     }
 };
-
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-
-// Временное хранилище (замените на базу данных)
-const roleStore = new Map();
-
-async function getRolesFromDB(guildId) {
-    if (!roleStore.has(guildId)) {
-        roleStore.set(guildId, []);
-    }
-    return roleStore.get(guildId);
-}
-
-async function addRoleToDB(guildId, roleData) {
-    if (!roleStore.has(guildId)) {
-        roleStore.set(guildId, []);
-    }
-    const roles = roleStore.get(guildId);
-    if (!roles.find(r => r.id === roleData.id)) {
-        roles.push(roleData);
-    }
-}
-
-async function removeRoleFromDB(guildId, roleId) {
-    if (!roleStore.has(guildId)) return;
-    const roles = roleStore.get(guildId);
-    roleStore.set(guildId, roles.filter(r => r.id !== roleId));
-}
-
-function getButtonStyleFromColor(color) {
-    if (!color) return ButtonStyle.Primary;
-    // Преобразуем цвет в стиль кнопки
-    const hex = color.toString(16).padStart(6, '0');
-    if (hex.startsWith('ff')) return ButtonStyle.Danger;
-    if (hex.startsWith('00')) return ButtonStyle.Success;
-    return ButtonStyle.Primary;
-          }
