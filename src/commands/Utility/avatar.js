@@ -5,13 +5,13 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
-    .setName("avatar")
-    .setDescription("Display a user's avatar image")
+    .setName("аватар")
+    .setDescription("Показать аватар пользователя")
     .addUserOption((option) =>
       option
         .setName("target")
         .setDescription(
-          "The user whose avatar you want to see (defaults to you)",
+          "Пользователь, чей аватар вы хотите увидеть (по умолчанию — вы)",
         ),
     ),
 
@@ -20,8 +20,8 @@ export default {
     const avatarUrl = user.displayAvatarURL({ size: 2048, dynamic: true });
 
     const embed = createEmbed({ 
-      title: `${user.username}'s Avatar`, 
-      description: `[Download Link](${avatarUrl})` 
+      title: `Аватар пользователя ${user.username}`, 
+      description: `[Ссылка для скачивания](${avatarUrl})` 
     })
       .setImage(avatarUrl);
 
