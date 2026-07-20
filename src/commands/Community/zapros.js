@@ -1,6 +1,12 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { 
+    approveButtonHandler,
+    rejectButtonHandler,
+    infoButtonHandler,
+    dmButtonHandler
+} from './handlers/zaprosButtons.js';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
 const ADMIN_CHANNEL_ID = '1528732465747857438';
