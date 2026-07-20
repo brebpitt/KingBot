@@ -10,26 +10,27 @@ import nextBirthdays from './modules/next_birthdays.js';
 import birthdaySetchannel from './modules/birthday_setchannel.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
-        .setName('birthday')
-        .setDescription('Birthday system commands')
+        .setName('день_рождения')
+        .setDescription('Команды системы дней рождения')
         .addSubcommand(subcommand =>
             subcommand
-                .setName('set')
-                .setDescription('Set your birthday')
+                .setName('установить')
+                .setDescription('Установить вашу дату рождения')
                 .addIntegerOption(option =>
                     option
-                        .setName('month')
-                        .setDescription('Birth month (1-12)')
+                        .setName('месяц')
+                        .setDescription('Месяц рождения (1-12)')
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(12)
                 )
                 .addIntegerOption(option =>
                     option
-                        .setName('day')
-                        .setDescription('Birth day (1-31)')
+                        .setName('день')
+                        .setDescription('День рождения (1-31)')
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(31)
@@ -37,38 +38,38 @@ export default {
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('info')
-                .setDescription('View birthday information')
+                .setName('информация')
+                .setDescription('Просмотр информации о дне рождения')
                 .addUserOption(option =>
                     option
-                        .setName('user')
-                        .setDescription('User to check birthday for')
+                        .setName('пользователь')
+                        .setDescription('Пользователь, чей день рождения проверить')
                         .setRequired(false)
                 )
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('list')
-                .setDescription('List all birthdays in the server')
+                .setName('список')
+                .setDescription('Показать все дни рождения на сервере')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('remove')
-                .setDescription('Remove your birthday')
+                .setName('удалить')
+                .setDescription('Удалить вашу дату рождения')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('next')
-                .setDescription('Show upcoming birthdays')
+                .setName('ближайшие')
+                .setDescription('Показать ближайшие дни рождения')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('setchannel')
-                .setDescription('Set or disable the channel for birthday announcements. (Manage Server required)')
+                .setName('канал')
+                .setDescription('Установить или отключить канал для объявлений о днях рождения. (Требуется Управление сервером)')
                 .addChannelOption(option =>
                     option
-                        .setName('channel')
-                        .setDescription('The text channel for announcements. Leave empty to disable.')
+                        .setName('канал')
+                        .setDescription('Текстовый канал для объявлений. Оставьте пустым, чтобы отключить.')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(false)
                 )
@@ -78,20 +79,20 @@ export default {
         const subcommand = interaction.options.getSubcommand();
 
         switch (subcommand) {
-            case 'set':
+            case 'установить':
                 return await birthdaySet.execute(interaction, config, client);
-            case 'info':
+            case 'информация':
                 return await birthdayInfo.execute(interaction, config, client);
-            case 'list':
+            case 'список':
                 return await birthdayList.execute(interaction, config, client);
-            case 'remove':
+            case 'удалить':
                 return await birthdayRemove.execute(interaction, config, client);
-            case 'next':
+            case 'ближайшие':
                 return await nextBirthdays.execute(interaction, config, client);
-            case 'setchannel':
+            case 'канал':
                 return await birthdaySetchannel.execute(interaction, config, client);
             default:
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Неизвестная подкоманда' });
         }
     }
 };
