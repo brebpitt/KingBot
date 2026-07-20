@@ -9,12 +9,20 @@ import {
     ChannelType
 } from 'discord.js';
 
-// Импортируем функции из roleButton.js
+// --- ИМПОРТЫ ИЗ roleButton.js (В НАЧАЛЕ ФАЙЛА) ---
 import { 
-    addRoleToStore, 
-    removeRoleFromStore, 
+    getGuildRoles,
+    getRoleById,
+    addRoleToStore,
+    removeRoleFromStore,
+    isRoleInStore,
+    getRoleCount,
     getButtonStyleFromColor,
-    getRolesFromDB 
+    getRoleEmoji,
+    getRoleDescription,
+    getUserSystemRoles,
+    hasUserSystemRole,
+    clearGuildRoles
 } from '../handlers/roleButton.js';
 
 export default {
@@ -107,7 +115,7 @@ export default {
         if (subcommand === 'создать') {
             const channel = interaction.options.getChannel('канал');
             const type = interaction.options.getString('тип');
-            const roles = await getRolesFromDB(interaction.guildId);
+            const roles = getGuildRoles(interaction.guildId);
 
             if (!roles || roles.length === 0) {
                 return interaction.reply({
@@ -210,7 +218,7 @@ export default {
                 });
             }
 
-            const added = await addRoleToStore(interaction.guildId, {
+            const added = addRoleToStore(interaction.guildId, {
                 id: role.id,
                 name: role.name,
                 color: role.color,
@@ -234,7 +242,7 @@ export default {
         // --- УДАЛЕНИЕ РОЛИ ---
         else if (subcommand === 'удалить') {
             const role = interaction.options.getRole('роль');
-            const removed = await removeRoleFromStore(interaction.guildId, role.id);
+            const removed = removeRoleFromStore(interaction.guildId, role.id);
 
             if (removed) {
                 await interaction.reply({
@@ -251,7 +259,7 @@ export default {
 
         // --- СПИСОК РОЛЕЙ ---
         else if (subcommand === 'список') {
-            const roles = await getRolesFromDB(interaction.guildId);
+            const roles = getGuildRoles(interaction.guildId);
             
             if (!roles || roles.length === 0) {
                 return interaction.reply({
@@ -270,7 +278,7 @@ export default {
                         return `${i + 1}. ${r.emoji} **${roleName}** - ${r.description || 'Нет описания'}`;
                     }).join('\n')
                 )
-                .setFooter({ text: `Всего ролей: ${roles.length}` })
+                .setFooter({ text: `Всего ролей: ${getRoleCount(interaction.guildId)}` })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
@@ -322,7 +330,7 @@ export default {
             const user = interaction.options.getUser('пользователь');
             const member = await interaction.guild.members.fetch(user.id);
 
-            const allRoles = await getRolesFromDB(interaction.guildId);
+            const allRoles = getGuildRoles(interaction.guildId);
             const userRoles = member.roles.cache.filter(r => 
                 allRoles.some(ar => ar.id === r.id)
             );
@@ -358,7 +366,7 @@ export default {
                     .map(r => `• ${r.name}`)
                     .join('\n');
                 
-                if (allUserRoles.length < 1024) {
+                if (allUserRoles && allUserRoles.length < 1024) {
                     embed.addFields({
                         name: '📋 Все роли пользователя',
                         value: allUserRoles || 'Нет ролей',
