@@ -149,7 +149,7 @@ export default {
             logger.error(`Ошибка отправки в админ-канал:`, error);
         }
 
-        // ===== ПОДТВЕРЖДЕНИЕ ПОЛЬЗОВАТЕЛЮ =====
+        // ===== ПОДТВЕРЖДЕНИЕ ПОЛЬЗОВАТЕЛЮ (ТОЛЬКО ЕМУ ВИДНО) =====
         const userEmbed = new EmbedBuilder()
             .setColor('#00FF00')
             .setTitle('✅ Заявка отправлена!')
@@ -164,8 +164,10 @@ export default {
             .setFooter({ text: 'Администрация рассмотрит вашу заявку в ближайшее время' })
             .setTimestamp();
 
+        // Отправляем ответ ТОЛЬКО пользователю, вызвавшему команду
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [userEmbed]
+            embeds: [userEmbed],
+            ephemeral: true // <-- ЭТО ДЕЛАЕТ СООБЩЕНИЕ ВИДНЫМ ТОЛЬКО ОТПРАВИТЕЛЮ
         });
 
         logger.info(`Заявка на роль создана`, {
