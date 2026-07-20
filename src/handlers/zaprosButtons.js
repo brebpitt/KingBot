@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../src/utils/logger.js';
 // Если errorHandler находится в папке utils, используйте этот путь:
 import { TitanBotError, ErrorTypes, handleInteractionError, replyUserError } from '../../utils/errorHandler.js';
 
