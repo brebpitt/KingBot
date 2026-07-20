@@ -10,86 +10,85 @@ import ticketConfig from './modules/ticket_dashboard.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("ticket")
-        .setDescription("Manages the server's ticket system.")
+        .setName("тикет")  // Основная команда
+        .setDescription("Управление системой тикетов на сервере.")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addSubcommand((subcommand) =>
             subcommand
-                .setName("setup")
+                .setName("настройка")  // Подкоманда настройки
                 .setDescription(
-                    "Sets up the ticket creation panel in a specified channel.",
+                    "Настройка панели создания тикетов в указанном канале.",
                 )
                 .addChannelOption((option) =>
                     option
-.setName("panel_channel")
+                        .setName("канал_панели")
                         .setDescription(
-                            "The channel where the ticket panel will be sent.",
+                            "Канал, в который будет отправлена панель тикетов.",
                         )
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(true),
                 )
-
                 .addStringOption((option) =>
                     option
-                        .setName("panel_message")
+                        .setName("текст_панели")
                         .setDescription(
-                            "The main message/description for the ticket panel.",
+                            "Основное сообщение/описание для панели тикетов.",
                         )
                         .setRequired(true),
                 )
                 .addStringOption((option) =>
                     option
-                        .setName("button_label")
+                        .setName("надпись_кнопки")
                         .setDescription(
-                            "The label for the ticket creation button (default: Create Ticket)",
+                            "Текст на кнопке создания тикета (по умолчанию: Создать тикет)",
                         )
                         .setRequired(false),
                 )
                 .addChannelOption((option) =>
                     option
-                        .setName("category")
+                        .setName("категория")
                         .setDescription(
-                            "The category where new tickets will be created (optional).",
+                            "Категория, в которой будут создаваться новые тикеты (необязательно).",
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
                         .setRequired(false),
                 )
                 .addChannelOption((option) =>
                     option
-                        .setName("closed_category")
+                        .setName("категория_закрытых")
                         .setDescription(
-                            "The category where closed tickets will be moved (optional).",
+                            "Категория, в которую будут перемещаться закрытые тикеты (необязательно).",
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
                         .setRequired(false),
                 )
                 .addRoleOption((option) =>
                     option
-                        .setName("staff_role")
+                        .setName("роль_персонала")
                         .setDescription(
-                            "The role that can access tickets (optional).",
+                            "Роль, которая будет иметь доступ к тикетам (необязательно).",
                         )
                         .setRequired(false),
                 )
                 .addIntegerOption((option) =>
                     option
-                        .setName("max_tickets_per_user")
-                        .setDescription("Maximum number of tickets a user can create (default: 3)")
+                        .setName("макс_тикетов")
+                        .setDescription("Максимальное количество тикетов на пользователя (по умолчанию: 3)")
                         .setMinValue(1)
                         .setMaxValue(10)
                         .setRequired(false),
                 )
                 .addBooleanOption((option) =>
                     option
-                        .setName("dm_on_close")
-                        .setDescription("Send DM to user when their ticket is closed (default: true)")
+                        .setName("лс_при_закрытии")
+                        .setDescription("Отправлять ЛС пользователю при закрытии тикета (по умолчанию: включено)")
                         .setRequired(false),
                 ),
         )
         .addSubcommand((subcommand) =>
             subcommand
-                .setName("dashboard")
-                .setDescription("Open the interactive ticket system dashboard"),
+                .setName("панель")
+                .setDescription("Открыть интерактивную панель управления системой тикетов"),
         ),
     category: "ticket",
 
@@ -99,53 +98,54 @@ export default {
             return;
         }
 
+        // Проверка прав
         if (
             !interaction.member.permissions.has(
                 PermissionFlagsBits.ManageChannels,
             )
         ) {
-            logger.warn('Ticket command permission denied', {
+            logger.warn('Отказано в доступе к команде тикет', {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'ticket'
+                commandName: 'тикет'
             });
-            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission for this action.' });
+            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Для этого действия требуется право `Manage Channels`.' });
         }
 
         const subcommand = interaction.options.getSubcommand();
 
-        if (subcommand === "dashboard") {
+        if (subcommand === "панель") {
             return ticketConfig.execute(interaction, config, client);
         }
 
-        if (subcommand === "setup") {
+        if (subcommand === "настройка") {
             const existingConfig = await getGuildConfig(client, interaction.guildId);
             if (existingConfig?.ticketPanelChannelId) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `This server already has a ticket system set up (panel in <#${existingConfig.ticketPanelChannelId}>).\n\nOnly one ticket system is supported per server. Use \`/ticket dashboard\` to edit or update the existing setup, or select **Delete System** from the dashboard to remove it and start fresh.` });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `На этом сервере уже настроена система тикетов (панель в <#${existingConfig.ticketPanelChannelId}>).\n\nНа сервере поддерживается только одна система тикетов. Используйте \`/тикет панель\` для редактирования существующей настройки, или выберите **Удалить систему** в панели управления, чтобы удалить её и настроить заново.` });
             }
 
             const panelChannel =
-                interaction.options.getChannel("panel_channel");
-            const categoryChannel = interaction.options.getChannel("category");
-            const closedCategoryChannel = interaction.options.getChannel("closed_category");
-            const staffRole = interaction.options.getRole("staff_role");
-const panelMessage = interaction.options.getString("panel_message") || "Click the button below to create a support ticket.";
+                interaction.options.getChannel("канал_панели");
+            const categoryChannel = interaction.options.getChannel("категория");
+            const closedCategoryChannel = interaction.options.getChannel("категория_закрытых");
+            const staffRole = interaction.options.getRole("роль_персонала");
+            const panelMessage = interaction.options.getString("текст_панели") || "Нажмите на кнопку ниже, чтобы создать тикет поддержки.";
             const buttonLabel =
-                interaction.options.getString("button_label") ||
-"Create Ticket";
-            const maxTicketsPerUser = interaction.options.getInteger("max_tickets_per_user") || 3;
-const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
+                interaction.options.getString("надпись_кнопки") ||
+                "Создать тикет";
+            const maxTicketsPerUser = interaction.options.getInteger("макс_тикетов") || 3;
+            const dmOnClose = interaction.options.getBoolean("лс_при_закрытии") !== false;
 
             const setupEmbed = createEmbed({ 
-                title: "Support Tickets", 
-description: panelMessage,
+                title: "Тикеты поддержки", 
+                description: panelMessage,
                 color: getColor('info')
             });
 
             const ticketButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("create_ticket")
-.setLabel(buttonLabel)
+                    .setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji("📩"),
             );
@@ -156,8 +156,9 @@ description: panelMessage,
                     components: [ticketButton],
                 });
 
+                // Сохранение конфигурации
                 if (client.db && interaction.guildId) {
-                    const currentConfig = existingConfig;
+                    const currentConfig = existingConfig || {};
                     currentConfig.ticketCategoryId = categoryChannel ? categoryChannel.id : null;
                     currentConfig.ticketClosedCategoryId = closedCategoryChannel ? closedCategoryChannel.id : null;
                     currentConfig.ticketStaffRoleId = staffRole ? staffRole.id : null;
@@ -169,7 +170,7 @@ description: panelMessage,
                     currentConfig.dmOnClose = dmOnClose;
 
                     await setGuildConfig(client, interaction.guildId, currentConfig);
-                    logger.info('Ticket configuration saved', {
+                    logger.info('Конфигурация тикетов сохранена', {
                         guildId: interaction.guildId,
                         categoryId: categoryChannel?.id,
                         closedCategoryId: closedCategoryChannel?.id,
@@ -178,39 +179,39 @@ description: panelMessage,
                         dmOnClose: dmOnClose,
                     });
                 } else {
-                    logger.error('Ticket setup: database unavailable, panel sent but configuration was NOT saved', {
+                    logger.error('Настройка тикетов: база данных недоступна, панель отправлена, но конфигурация НЕ сохранена', {
                         guildId: interaction.guildId,
                     });
                 }
 
-                let successMessage = `The ticket creation panel has been sent to ${panelChannel}.`;
+                let successMessage = `Панель создания тикетов отправлена в ${panelChannel}.`;
                 
                 if (categoryChannel) {
-                    successMessage += `New tickets will be created in the **${categoryChannel.name}** category.`;
+                    successMessage += ` Новые тикеты будут создаваться в категории **${categoryChannel.name}**.`;
                 } else {
-                    successMessage += 'New tickets will be created in a new "Tickets" category.';
+                    successMessage += ' Новые тикеты будут создаваться в новой категории "Тикеты".';
                 }
                 
                 if (closedCategoryChannel) {
-                    successMessage += `Closed tickets will be moved to **${closedCategoryChannel.name}**.`;
+                    successMessage += ` Закрытые тикеты будут перемещаться в **${closedCategoryChannel.name}**.`;
                 }
                 
                 if (staffRole) {
-                    successMessage += `**${staffRole.name}** role will have access to tickets.`;
+                    successMessage += ` Роль **${staffRole.name}** будет иметь доступ к тикетам.`;
                 }
                 
-                successMessage += `\n\n**Max Tickets Per User:** ${maxTicketsPerUser}\n**DM on Close:** ${dmOnClose ? 'Enabled' : 'Disabled'}`;
+                successMessage += `\n\n**Максимум тикетов на пользователя:** ${maxTicketsPerUser}\n**ЛС при закрытии:** ${dmOnClose ? 'Включено' : 'Отключено'}`;
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "Ticket Panel Set Up",
+                            "Панель тикетов настроена",
                             successMessage,
                         ),
                     ],
                 });
 
-                logger.info('Ticket panel setup completed', {
+                logger.info('Настройка панели тикетов завершена', {
                     userId: interaction.user.id,
                     userTag: interaction.user.tag,
                     guildId: interaction.guildId,
@@ -220,76 +221,85 @@ description: panelMessage,
                     staffRoleId: staffRole?.id,
                     maxTickets: maxTicketsPerUser,
                     dmOnClose: dmOnClose,
-                    commandName: 'ticket_setup'
+                    commandName: 'тикет_настройка'
                 });
 
+                // Лог в канал аудита
                 const logEmbed = createEmbed({
-                    title: "Ticket System Setup (Configuration Log)",
-                    description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
+                    title: "Настройка системы тикетов (Лог конфигурации)",
+                    description: `Панель тикетов настроена в ${panelChannel} пользователем ${interaction.user}.`,
                     color: getColor('warning')
                 })
                     .addFields(
                         {
-                            name: "Panel Channel",
+                            name: "Канал панели",
                             value: panelChannel.toString(),
                             inline: true,
                         },
                         {
-                            name: "Ticket Category",
+                            name: "Категория тикетов",
                             value: categoryChannel
                                 ? categoryChannel.toString()
-                                : "None specified.",
+                                : "Не указана.",
                             inline: true,
                         },
                         {
-                            name: "Closed Category",
+                            name: "Категория закрытых",
                             value: closedCategoryChannel
                                 ? closedCategoryChannel.toString()
-                                : "None specified.",
+                                : "Не указана.",
                             inline: true,
                         },
                         {
-                            name: "Staff Role",
+                            name: "Роль персонала",
                             value: staffRole
                                 ? staffRole.toString()
-                                : "None specified.",
+                                : "Не указана.",
                             inline: true,
                         },
                         {
-                            name: "Max Tickets Per User",
+                            name: "Максимум тикетов",
                             value: maxTicketsPerUser.toString(),
                             inline: true,
                         },
                         {
-                            name: "DM on Close",
-                            value: dmOnClose ? 'Enabled' : 'Disabled',
+                            name: "ЛС при закрытии",
+                            value: dmOnClose ? 'Включено' : 'Отключено',
                             inline: true,
                         },
                         {
-                            name: "Moderator",
+                            name: "Модератор",
                             value: `${interaction.user.tag} (${interaction.user.id})`,
                             inline: false,
                         },
                     );
 
+                // Отправка лога в канал аудита, если он настроен
+                if (config?.auditLogChannelId) {
+                    const auditChannel = interaction.guild.channels.cache.get(config.auditLogChannelId);
+                    if (auditChannel?.type === ChannelType.GuildText) {
+                        await auditChannel.send({ embeds: [logEmbed] }).catch(() => {});
+                    }
+                }
+
             } catch (error) {
-                logger.error('Ticket setup error', {
+                logger.error('Ошибка настройки тикетов', {
                     error: error.message,
                     stack: error.stack,
                     userId: interaction.user.id,
                     guildId: interaction.guildId,
-                    commandName: 'ticket_setup'
+                    commandName: 'тикет_настройка'
                 });
                 if (interaction.deferred || interaction.replied) {
-                    await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not send the ticket panel or save configuration. Check the bot\'s permissions (especially the ability to send messages in the target channel) and database connection.' }).catch(err => {
-                        logger.error('Failed to send error reply', {
+                    await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Не удалось отправить панель тикетов или сохранить конфигурацию. Проверьте права бота (особенно возможность отправлять сообщения в целевой канал) и подключение к базе данных.' }).catch(err => {
+                        logger.error('Не удалось отправить ответ об ошибке', {
                             error: err.message,
                             guildId: interaction.guildId
                         });
                     });
                 } else {
                     await handleInteractionError(interaction, error, {
-                        commandName: 'ticket_setup',
+                        commandName: 'тикет_настройка',
                         source: 'ticket_setup_command'
                     });
                 }
