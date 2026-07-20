@@ -1,7 +1,7 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-
+import { EmbedBuilder } from `@discordjs/builders`;
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
 const ADMIN_CHANNEL_ID = '1528732465747857438';
 const ADMIN_ROLE_ID = '1510803430166495295';
@@ -167,7 +167,7 @@ export default {
         // Отправляем ответ ТОЛЬКО пользователю, вызвавшему команду
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [userEmbed],
-            ephemeral: true // <-- ЭТО ДЕЛАЕТ СООБЩЕНИЕ ВИДНЫМ ТОЛЬКО ОТПРАВИТЕЛЮ
+            ephemeral: true
         });
 
         logger.info(`Заявка на роль создана`, {
