@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { EmbedBuilder } from `@discordjs/builders`;
+import { EmbedBuilder } from '@discordjs/builders';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
 const ADMIN_CHANNEL_ID = '1528732465747857438';
