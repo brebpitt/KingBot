@@ -2,6 +2,12 @@ import { MessageFlags, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { successEmbed, errorEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError, replyUserError } from '../utils/errorHandler.js';
+import { 
+    approveButtonHandler,
+    rejectButtonHandler,
+    infoButtonHandler,
+    dmButtonHandler
+} from './handlers/zaprosButtons.js';
 
 // ===== НАСТРОЙКИ (ЗАМЕНИТЕ НА СВОИ) =====
 const ADMIN_CHANNEL_ID = '1528732465747857438';
