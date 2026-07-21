@@ -31,6 +31,7 @@ export default {
             .setColor('#ffb5b5')
             .setDescription(text)
             .setTimestamp()      
+            .setAuthor()
             });
 
         // Добавляем футер, если указан
