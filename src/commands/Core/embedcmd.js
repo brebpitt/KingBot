@@ -28,10 +28,9 @@ export default {
 
         // ===== ОСНОВНОЙ ЭМБЕД =====
         const embed = new EmbedBuilder()
-            .setColor('#FFFF00')
+            .setColor('#ffb5b5')
             .setDescription(text)
-            .setTimestamp()
-            .setAuthor({ Организации 01 })
+            .setTimestamp()      
             });
 
         // Добавляем футер, если указан
