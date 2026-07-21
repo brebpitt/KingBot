@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
+import { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } from `discord.js`;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -90,6 +90,12 @@ module.exports = {
 > На основании решения Лидера **${faction}** деятельность фракции временно приостанавливается.
 > На **${freezeTime} часов**, окончание **${formatDate(endTime)}**.
             `)
+            .addFields(
+                { name: '👤 Назначен', value: `<@${player.id}>`, inline: true },
+                { name: '🏛️ Фракция', value: faction, inline: true },
+                { name: '⏰ Мороз', value: `${freezeTime} часов`, inline: true },
+                { name: '📋 Подтверждение ГС', value: gsConfirm || 'Не указано', inline: false }
+            )
             .setFooter({ 
                 text: `Назначил: ${interaction.user.tag} | ${new Date().toLocaleString('ru-RU')}`,
                 iconURL: interaction.user.displayAvatarURL()
