@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, ChannelType } = from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, ChannelType } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -26,14 +26,14 @@ export default {
         const footer = interaction.options.getString('футер');
         const channel = interaction.options.getChannel('канал') || interaction.channel;
 
-        // Создаём эмбед
+        // ===== ОСНОВНОЙ ЭМБЕД =====
         const embed = new EmbedBuilder()
+            .setColor('#00FF00')
             .setDescription(text)
-            .setColor(0x00AEFF) // Синий цвет
             .setTimestamp()
             .setAuthor({
                 name: interaction.user.tag,
-                iconURL: interaction.user.displayAvatarURL()
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
             });
 
         // Добавляем футер, если указан
@@ -45,15 +45,15 @@ export default {
             // Отправляем эмбед в указанный канал
             await channel.send({ embeds: [embed] });
             
-            // Подтверждаем выполнение (эпимерное сообщение)
+            // Подтверждение (эпимерное)
             await interaction.reply({
-                content: `✅ Эмбед отправлен в ${channel.toString()}`,
+                content: `✅ Эмбед успешно отправлен в ${channel.toString()}`,
                 ephemeral: true
             });
         } catch (error) {
-            console.error('Ошибка отправки эмбеда:', error);
+            console.error('❌ Ошибка отправки эмбеда:', error);
             await interaction.reply({
-                content: '❌ Не удалось отправить эмбед. Проверьте права бота.',
+                content: '❌ Не удалось отправить эмбед. Проверьте права бота в канале.',
                 ephemeral: true
             });
         }
