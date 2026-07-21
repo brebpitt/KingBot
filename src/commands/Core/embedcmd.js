@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder, ChannelType } = from 'discord.js';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('эмбед')
         .setDescription('Отправить красивое эмбед-сообщение')
