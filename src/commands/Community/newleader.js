@@ -1,6 +1,20 @@
-import { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } from `discord.js`;
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
-module.exports = {
+// ===== ФРАКЦИИ =====
+const FACTIONS = [
+    { label: '🏛️ Правительство', value: 'government' },
+    { label: '🔐 ФСБ', value: 'fsb' },
+    { label: '🚔 МВД', value: 'mvd' },
+    { label: '🚦 ГИБДД', value: 'gibdd' },
+    { label: '⚔️ ВЧ', value: 'vch' },
+    { label: '🏥 Городская Больница', value: 'gb' },
+    { label: '📺 СМИ', value: 'media' },
+    { label: '🔫 Арзамасская ОПГ', value: 'arzamas' },
+    { label: '🔪 Батыревское ОПГ', value: 'batyrevo' },
+    { label: '💀 Лыткаринская ОПГ', value: 'lytkarino' }
+];
+
+export default {
     data: new SlashCommandBuilder()
         .setName('назначить_лидера')
         .setDescription('Назначить нового лидера фракции')
@@ -9,16 +23,7 @@ module.exports = {
                 .setDescription('Выберите фракцию')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Правительство', value: 'Правительство' },
-                    { name: 'ФСБ', value: 'ФСБ' },
-                    { name: 'МВД', value: 'МВД' },
-                    { name: 'ГИБДД', value: 'ГИБДД' },
-                    { name: 'ВЧ', value: 'ВЧ' },
-                    { name: 'ГБ', value: 'ГБ' },
-                    { name: 'СМИ', value: 'СМИ' },
-                    { name: 'Батыревское ОПГ', value: 'Батыревское ОПГ' },
-                    { name: 'Арзамасская ОПГ', value: 'Арзамасская ОПГ' },
-                    { name: 'Лыткаринская ОПГ', value: 'Лыткаринская ОПГ' }
+                    ...FACTIONS.map(f => ({ name: f.label, value: f.value }))
                 ))
         .addUserOption(option =>
             option.setName('игрок')
@@ -48,18 +53,18 @@ module.exports = {
                 )),
 
     async execute(interaction) {
-        // Проверка прав (только для администраторов)
-        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        const factionValue = interaction.options.getString('фракция');
+        const player = interaction.options.getUser('игрок');
+        const freezeTime = interaction.options.getString('мороз');
+        const gsConfirm = interaction.options.getString('подтверждение_гс') || 'Не указано';
+
+        const selectedFaction = FACTIONS.find(f => f.value === factionValue);
+        if (!selectedFaction) {
             return interaction.reply({
-                content: '❌ У вас недостаточно прав для использования этой команды!',
+                content: '❌ Выбрана несуществующая фракция!',
                 ephemeral: true
             });
         }
-
-        const faction = interaction.options.getString('фракция');
-        const player = interaction.options.getUser('игрок');
-        const freezeTime = interaction.options.getString('мороз');
-        const gsConfirm = interaction.options.getString('подтверждение_гс') || '';
 
         // Рассчет времени окончания
         const now = new Date();
@@ -76,32 +81,36 @@ module.exports = {
             });
         };
 
-        // Создание эмбеда
+        // ===== ОСНОВНОЙ ЭМБЕД =====
         const embed = new EmbedBuilder()
-            .setColor(0xFFD700)
+            .setColor('#FFD700')
             .setTitle('🌟 НАЗНАЧЕНИЕ ЛИДЕРА')
+            .setThumbnail(player.displayAvatarURL({ dynamic: true, size: 256 }))
             .setDescription(`
-🌟 Доброго времени суток, уважаемый <@&1510804231278301336>
+🌟 Доброго времени суток, уважаемые сотрудники!
 
-🏆 Новым лидером организации **${faction}** Нижегородской области назначен <@${player.id}>! Он официально вступил в должность и приступил к исполнению обязанностей.
+🏆 Новым лидером организации **${selectedFaction.label}** Нижегородской области назначен <@${player.id}>! Он официально вступил в должность и приступил к исполнению обязанностей.
 
 > 🎉 Поздравляем его с назначением на высокий пост! Уверены, что он достигнет всех поставленных целей.
 
-> На основании решения Лидера **${faction}** деятельность фракции временно приостанавливается.
+> На основании решения Лидера **${selectedFaction.label}** деятельность фракции временно приостанавливается.
 > На **${freezeTime} часов**, окончание **${formatDate(endTime)}**.
             `)
             .addFields(
                 { name: '👤 Назначен', value: `<@${player.id}>`, inline: true },
-                { name: '🏛️ Фракция', value: faction, inline: true },
-                { name: '⏰ Мороз', value: `${freezeTime} часов`, inline: true },
-                { name: '📋 Подтверждение ГС', value: gsConfirm || 'Не указано', inline: false }
+                { name: '🏛️ Фракция', value: selectedFaction.label, inline: true },
+                { name: '⏰ Мороз', value: `${freezeTime} часов\nдо ${formatDate(endTime)}`, inline: true },
+                { name: '📋 Подтверждение ГС', value: gsConfirm, inline: true }
             )
             .setFooter({ 
-                text: `Назначил: ${interaction.user.tag} | ${new Date().toLocaleString('ru-RU')}`,
+                text: `Назначил: ${interaction.user.tag}`,
                 iconURL: interaction.user.displayAvatarURL()
             })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        // ===== ОТПРАВКА В КАНАЛ =====
+        await interaction.reply({
+            embeds: [embed]
+        });
     }
 };
