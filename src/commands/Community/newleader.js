@@ -1,5 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { EmbedBuilder } from '@discordjs/builders';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
 // ===== ФРАКЦИИ =====
 const FACTIONS = [
