@@ -83,11 +83,10 @@ export default {
 
         // ===== ОСНОВНОЙ ЭМБЕД =====
         const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('🌟 НАЗНАЧЕНИЕ ЛИДЕРА')
+            .setColor('#00FF00')
             .setThumbnail(player.displayAvatarURL({ dynamic: true, size: 256 }))
             .setDescription(`
-🌟 Доброго времени суток, уважаемые сотрудники!
+🌟 Доброго времени суток, уважаемые <@&1510804231278301336>!
 
 🏆 Новым лидером организации **${selectedFaction.label}** Нижегородской области назначен <@${player.id}>! Он официально вступил в должность и приступил к исполнению обязанностей.
 
