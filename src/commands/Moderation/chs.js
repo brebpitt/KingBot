@@ -32,6 +32,13 @@ const CHS_TYPES = {
         emoji: '🟢', 
         color: Colors.Green,
         description: 'Черный Список Старшего Состава'
+    },
+    // ⬇️ НОВЫЙ ВИД ЧСА ⬇️
+    'ЧСА': { 
+        label: 'ЧСА', 
+        emoji: '⚫', 
+        color: Colors.DarkButNotBlack,
+        description: 'Черный Список Администрации'
     }
 };
 
@@ -56,7 +63,8 @@ export default {
                     { name: '🔴 ЧСЛ', value: 'ЧСЛ' },
                     { name: '🟠 ЧСП', value: 'ЧСП' },
                     { name: '🟡 ЧСГОС', value: 'ЧСГОС' },
-                    { name: '🟢 ЧССС', value: 'ЧССС' }
+                    { name: '🟢 ЧССС', value: 'ЧССС' },
+                    { name: '⚫ ЧСА', value: 'ЧСА' } // ⬅️ Добавлен ЧСА в выбор
                 )
         )
         .addStringOption(option =>
@@ -139,10 +147,24 @@ export default {
             });
         }
 
-        // Проверка: нельзя выдать ЧС администратору
-        if (member.roles.cache.has(ADMIN_ROLE_ID)) {
+        // ⬇️ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА ДЛЯ ЧСА ⬇️
+        // ЧСА может выдать только администратор
+        if (chsType === 'ЧСА') {
+            const isAdmin = interaction.member.roles.cache.has(ADMIN_ROLE_ID) || 
+                           interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+            
+            if (!isAdmin) {
+                return InteractionHelper.safeEditReply(interaction, {
+                    content: '❌ **ЧСА** может выдавать только администрация!',
+                    ephemeral: true
+                });
+            }
+        }
+
+        // Проверка: нельзя выдать ЧС администратору (кроме ЧСА)
+        if (chsType !== 'ЧСА' && member.roles.cache.has(ADMIN_ROLE_ID)) {
             return InteractionHelper.safeEditReply(interaction, {
-                content: '❌ Нельзя выдать ЧС администратору!',
+                content: '❌ Нельзя выдать ЧС администратору! Используйте ЧСА для администраторов.',
                 ephemeral: true
             });
         }
@@ -178,7 +200,7 @@ export default {
             )
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true, size: 256 }))
             .setFooter({ 
-                text: 'Пожалуйста, не нарушайте правила игры!',
+                text: chsType === 'ЧСА' ? '⚠️ ЧСА - только для администрации!' : 'Пожалуйста, не нарушайте правила игры!',
                 iconURL: interaction.guild.iconURL()
             })
             .setTimestamp();
@@ -210,7 +232,9 @@ export default {
             const modChannel = await interaction.guild.channels.fetch(MODERATION_CHANNEL_ID);
             if (modChannel) {
                 await modChannel.send({
-                    content: `🔔 <@&${ADMIN_ROLE_ID}> Новое ЧС!`,
+                    content: chsType === 'ЧСА' 
+                        ? `⚠️ **ВНИМАНИЕ!** Выдано ЧСА! <@&${ADMIN_ROLE_ID}>`
+                        : `🔔 <@&${ADMIN_ROLE_ID}> Новое ЧС!`,
                     embeds: [embed],
                     components: [row]
                 });
@@ -245,6 +269,29 @@ export default {
             embeds: [userEmbed],
             ephemeral: true
         });
+
+        // ⬇️ ОТПРАВКА В ЛС ДЛЯ ЧСА ⬇️
+        if (chsType === 'ЧСА') {
+            try {
+                const dmEmbed = new EmbedBuilder()
+                    .setColor(Colors.DarkButNotBlack)
+                    .setTitle('⚫ Вы получили ЧСА')
+                    .setDescription(`Вы были занесены в **Черный Список Администрации**`)
+                    .addFields(
+                        { name: '📅 Срок', value: `\`${duration}\``, inline: true },
+                        { name: '📝 Причина', value: reason, inline: false },
+                        { name: '👮 Выдал', value: interaction.user.tag, inline: true }
+                    )
+                    .setFooter({ text: 'Вопросы решаются через форму на сайте.' })
+                    .setTimestamp();
+
+                await targetUser.send({ embeds: [dmEmbed] });
+                logger.info(`Отправлено ЛС уведомление о ЧСА для ${targetUser.tag}`);
+            } catch (error) {
+                logger.warn(`Не удалось отправить ЛС уведомление о ЧСА для ${targetUser.tag}:`, error);
+                // Не прерываем выполнение, если ЛС закрыты
+            }
+        }
 
         // ===== ЛОГИРОВАНИЕ =====
         if (LOG_CHANNEL_ID) {
