@@ -96,12 +96,6 @@ export default {
 > На основании решения Лидера **${selectedFaction.label}** деятельность фракции временно приостанавливается.
 > На **${freezeTime} часов**, окончание **${formatDate(endTime)}**.
             `)
-            .addFields(
-                { name: '👤 Назначен', value: `<@${player.id}>`, inline: true },
-                { name: '🏛️ Фракция', value: selectedFaction.label, inline: true },
-                { name: '⏰ Мороз', value: `${freezeTime} часов\nдо ${formatDate(endTime)}`, inline: true },
-                { name: '📋 Подтверждение ГС', value: gsConfirm, inline: true }
-            )
             .setFooter({ 
                 text: `Назначил: ${interaction.user.tag}`,
                 iconURL: interaction.user.displayAvatarURL()
