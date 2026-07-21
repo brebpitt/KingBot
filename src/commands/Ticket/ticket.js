@@ -5,7 +5,6 @@ import { getGuildConfig, setGuildConfig } from '../../services/config/guildConfi
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
-
 import ticketConfig from './modules/ticket_dashboard.js';
 
 export default {
