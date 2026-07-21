@@ -28,12 +28,10 @@ export default {
 
         // ===== ОСНОВНОЙ ЭМБЕД =====
         const embed = new EmbedBuilder()
-            .setColor('#00FF00')
+            .setColor('#FFFF00')
             .setDescription(text)
             .setTimestamp()
-            .setAuthor({
-                name: interaction.user.tag,
-                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            .setAuthor({ Организации 01 })
             });
 
         // Добавляем футер, если указан
