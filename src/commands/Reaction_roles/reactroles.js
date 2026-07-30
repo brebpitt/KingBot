@@ -16,11 +16,26 @@ import { getReactionRoleKey } from '../../utils/database/keys.js';
 const DASHBOARD_EPHEMERAL = MessageFlags.Ephemeral;
 const SELECT_OPTION_LABEL_LIMIT = 100;
 const SELECT_OPTION_DESCRIPTION_LIMIT = 100;
+const PANEL_BANNER_URL = 'https://cdn.discordapp.com/attachments/1510804375357100114/1532506761418899546/7104975bb9851790b44cd007d74411dd.jpg?ex=6a6d19a4&is=6a6bc824&hm=c80f21aba227f1ac3be85a29495e4d02a38ba540a72d5ee3817c02e03faefbc2&';
 
 function truncateText(value, maxLength) {
     const text = String(value ?? '');
     return text.length > maxLength ? text.substring(0, maxLength) : text;
 }
+
+// Доступные цвета для выбора
+const COLOR_OPTIONS = [
+    { name: 'Синий', value: 'info', color: '#5865F2' },
+    { name: 'Зелёный', value: 'success', color: '#57F287' },
+    { name: 'Красный', value: 'error', color: '#ED4245' },
+    { name: 'Жёлтый', value: 'warning', color: '#FEE75C' },
+    { name: 'Фиолетовый', value: 'blurple', color: '#5865F2' },
+    { name: 'Серый', value: 'grey', color: '#80848E' },
+    { name: 'Оранжевый', value: 'orange', color: '#FAA81A' },
+    { name: 'Розовый', value: 'pink', color: '#EB459E' },
+    { name: 'Голубой', value: 'cyan', color: '#1ABC9C' },
+    { name: 'Белый', value: 'white', color: '#FFFFFF' },
+];
 
 export default {
     data: new SlashCommandBuilder()
@@ -46,6 +61,14 @@ export default {
                     option.setName('описание')
                         .setDescription('Описание панели ролей по реакции')
                         .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option.setName('цвет')
+                        .setDescription('Цвет эмбеда панели')
+                        .setRequired(false)
+                        .addChoices(
+                            ...COLOR_OPTIONS.map(c => ({ name: c.name, value: c.value }))
+                        )
                 )
                 .addRoleOption(option =>
                     option.setName('роль1')
@@ -101,8 +124,6 @@ export default {
         if (interaction.commandName !== 'реакция_роль') return;
         if (interaction.options.getSubcommand() !== 'панель') return;
 
-        // Автозаполнение должно отвечать в течение 3 секунд. Создаём варианты из сохранённых данных панелей
-        // и кэшированных каналов/сообщений — без сетевых запросов, чтобы избежать DiscordAPIError 10062.
         try {
             const guildId = interaction.guild.id;
             const client = interaction.client;
@@ -154,6 +175,7 @@ async function handleSetup(interaction) {
     const channel = interaction.options.getChannel('канал');
     const title = interaction.options.getString('заголовок');
     const description = interaction.options.getString('описание');
+    const colorOption = interaction.options.getString('цвет') || 'info';
 
     if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) {
         throw createError(
@@ -272,10 +294,12 @@ async function handleSetup(interaction) {
             )
     );
 
+    // Создаем эмбед с выбранным цветом и баннером
     const panelEmbed = new EmbedBuilder()
         .setTitle(title)
         .setDescription(description)
-        .setColor(getColor('info'))
+        .setColor(getColor(colorOption))
+        .setImage(PANEL_BANNER_URL) // Добавляем баннер
         .addFields({
             name: 'Доступные роли',
             value: roles.map(role => `• ${role}`).join('\n')
@@ -297,8 +321,6 @@ async function handleSetup(interaction) {
             roleIds
         );
     } catch (saveError) {
-        // Панель уже опубликована, но её данные не сохранились, поэтому выпадающее меню
-        // не будет работать. Удаляем сообщение-сироту перед выводом ошибки.
         await message.delete().catch(() => {});
         throw saveError;
     }
@@ -339,6 +361,11 @@ async function handleSetup(interaction) {
                         name: 'Ссылка на сообщение',
                         value: message.url,
                         inline: false
+                    },
+                    {
+                        name: 'Цвет эмбеда',
+                        value: colorOption,
+                        inline: true
                     }
                 ]
             }
@@ -377,6 +404,12 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
         const currentEmbed = msg.embeds[0];
         const updatedEmbed = EmbedBuilder.from(currentEmbed);
+        
+        // Сохраняем баннер, если он был установлен
+        if (!updatedEmbed.data.image) {
+            updatedEmbed.setImage(PANEL_BANNER_URL);
+        }
+        
         const fields = currentEmbed.fields.map(f => ({ name: f.name, value: f.value, inline: f.inline }));
         const roleFieldIdx = fields.findIndex(f => f.name === 'Доступные роли');
         const newRoleValue = roleObjects.map(r => `• ${r}`).join('\n');
@@ -496,19 +529,47 @@ function buildReactionRoleDashboardPayload(panelData, discordMsg, guildId, guild
     return {
         embeds: [embed],
         components: [
-            new ActionRowBuilder().addComponents(buttons),
             new ActionRowBuilder().addComponents(optionsSelect),
+            new ActionRowBuilder().addComponents(buttons),
         ],
     };
 }
 
 async function migrateReactionRoleMessageId(client, guildId, panelData, newMessageId) {
-    // Функция для миграции ID сообщения панели
     try {
         const key = getReactionRoleKey(guildId, panelData.messageId);
-        // Здесь логика обновления ID в базе данных
         logger.info(`Миграция ID сообщения панели: ${panelData.messageId} -> ${newMessageId}`);
     } catch (error) {
         logger.error('Ошибка при миграции ID сообщения панели:', error);
     }
-            }
+}
+
+// Функция для изменения цвета панели через панель управления
+async function handleChangePanelColor(interaction, panelData, guildId) {
+    const modal = new ModalBuilder()
+        .setCustomId(`rr_color_modal_${guildId}`)
+        .setTitle('Изменение цвета панели');
+
+    const colorSelect = new StringSelectMenuBuilder()
+        .setCustomId('panel_color')
+        .setPlaceholder('Выберите цвет...')
+        .addOptions(
+            COLOR_OPTIONS.map(c => ({
+                label: c.name,
+                description: `Установить ${c.name} цвет`,
+                value: c.value,
+            }))
+        );
+
+    const actionRow = new ActionRowBuilder().addComponents(colorSelect);
+    modal.addComponents(actionRow);
+
+    await interaction.showModal(modal);
+}
+
+// Экспортируем функции для использования в других модулях
+export {
+    handleChangePanelColor,
+    COLOR_OPTIONS,
+    PANEL_BANNER_URL
+};
