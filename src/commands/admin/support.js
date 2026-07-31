@@ -12,6 +12,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // ===== НАСТРОЙКИ =====
 const ADMIN_ROLE_ID = '1510803430166495295'; // ID роли администрации
+const HEX_REGEX = /^#?[0-9A-Fa-f]{6}$/;
 
 export default {
     data: new SlashCommandBuilder()
@@ -28,38 +29,37 @@ export default {
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('цвет')
-                .setDescription('Цвет эмбеда в HEX (например: #FF6B00 или #3498db)')
+                .setDescription('Цвет эмбеда в HEX (например: #FF6B00 или 3498db)')
                 .setRequired(true))
         .addChannelOption(option => 
             option.setName('канал')
                 .setDescription('Канал для отправки панели поддержки')
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(true)),
-    
 
     async execute(interaction) {
-        // 1. Если кликнули по кнопке
+        // Если у вас единый хэндлер для всех интерактивов:
         if (interaction.isButton()) {
             await this.handleButton(interaction);
             return;
         }
 
-        // 2. Выполнение слэш-команды /поддержка
         const deferSuccess = await InteractionHelper.safeDefer(interaction, true);
-        if (!deferSuccess) {
-            logger.warn(`Ошибка отложенного ответа для команды поддержки`, {
-                userId: interaction.user.id,
-                guildId: interaction.guildId
+        if (!deferSuccess) return;
+
+        const title = interaction.options.getString('заголовок');
+        const text = interaction.options.getString('текст');
+        let color = interaction.options.getString('цвет').trim();
+        const targetChannel = interaction.options.getChannel('канал');
+
+        // Валидация HEX-цвета
+        if (!HEX_REGEX.test(color)) {
+            await InteractionHelper.safeEditReply(interaction, {
+                content: `❌ Некорректный HEX-формат цвета! Используйте формат вида \`#FF6B00\` или \`3498db\`.`
             });
             return;
         }
 
-        const title = interaction.options.getString('заголовок');
-        const text = interaction.options.getString('текст');
-        let color = interaction.options.getString('цвет');
-        const targetChannel = interaction.options.getChannel('канал');
-
-        // Подгоняем HEX цвет
         if (!color.startsWith('#')) {
             color = `#${color}`;
         }
@@ -88,23 +88,17 @@ export default {
                 content: `✅ Панель поддержки успешно отправлена в ${targetChannel}!`
             });
 
-            logger.info(`Панель поддержки отправлена`, {
-                adminId: interaction.user.id,
-                channelId: targetChannel.id,
-                guildId: interaction.guildId
-            });
-
         } catch (error) {
             logger.error(`Ошибка при отправке панели поддержки:`, error);
             await InteractionHelper.safeEditReply(interaction, {
-                content: `❌ Не удалось отправить панель. Проверьте формат цвета (пример: #3498db).`
+                content: `❌ Не удалось отправить панель в указанный канал.`
             });
         }
     },
 
     // ===== ОБРАБОТКА КНОПОК =====
     async handleButton(interaction) {
-        const { customId, guild, user, channel } = interaction;
+        const { customId, guild, user, channel, member } = interaction;
 
         // --- СОЗДАНИЕ ТИКЕТА ---
         if (customId === 'ticket_create') {
@@ -115,17 +109,16 @@ export default {
                 const cleanUsername = user.username.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
                 const channelName = `ticket-${cleanUsername}`;
 
-                // Создаем закрытый канал тикета
                 const ticketChannel = await guild.channels.create({
                     name: channelName,
                     type: ChannelType.GuildText,
                     permissionOverwrites: [
                         {
-                            id: guild.id, // Закрываем от всех
+                            id: guild.id,
                             deny: [PermissionFlagsBits.ViewChannel]
                         },
                         {
-                            id: user.id, // Открываем создателю
+                            id: user.id,
                             allow: [
                                 PermissionFlagsBits.ViewChannel,
                                 PermissionFlagsBits.SendMessages,
@@ -134,7 +127,7 @@ export default {
                             ]
                         },
                         {
-                            id: ADMIN_ROLE_ID, // Открываем администрации
+                            id: ADMIN_ROLE_ID,
                             allow: [
                                 PermissionFlagsBits.ViewChannel,
                                 PermissionFlagsBits.SendMessages,
@@ -176,21 +169,6 @@ export default {
                     content: `✅ Ваш тикет создан: ${ticketChannel}`
                 });
 
-                logger.info(`Тикет создан`, { userId: user.id, channelId: ticketChannel.id });
-
-                // Автоматическое удаление канала через 24 часа (86 400 000 мс)
-                setTimeout(async () => {
-                    try {
-                        const fetchedChannel = await guild.channels.fetch(ticketChannel.id).catch(() => null);
-                        if (fetchedChannel) {
-                            await fetchedChannel.delete('Авто-удаление тикета через 24 часа');
-                            logger.info(`Тикет ${ticketChannel.id} автоматически удален по истечении 24 часов.`);
-                        }
-                    } catch (err) {
-                        logger.error(`Ошибка при авто-удалении тикета:`, err);
-                    }
-                }, 86_400_000);
-
             } catch (error) {
                 logger.error(`Ошибка при создании тикета:`, error);
                 await InteractionHelper.safeEditReply(interaction, {
@@ -201,9 +179,8 @@ export default {
 
         // --- ВЗЯТЬ ОБРАЩЕНИЕ ---
         if (customId === 'ticket_claim') {
-            const member = interaction.member;
-            const hasAdminRole = member.roles.cache.has(ADMIN_ROLE_ID);
-            const hasAdminPerms = member.permissions.has(PermissionFlagsBits.Administrator);
+            const hasAdminRole = member?.roles?.cache?.has(ADMIN_ROLE_ID);
+            const hasAdminPerms = member?.permissions?.has(PermissionFlagsBits.Administrator);
 
             if (!hasAdminRole && !hasAdminPerms) {
                 return interaction.reply({
@@ -212,12 +189,10 @@ export default {
                 });
             }
 
-            // Находим упоминание создателя тикета из Embed
             const originalEmbed = interaction.message.embeds[0];
             const creatorField = originalEmbed?.fields?.find(f => f.name === 'Создал:');
             const creatorMention = creatorField ? creatorField.value : 'Пользователь';
 
-            // Отключаем кнопку "Взять обращение"
             const updatedRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId('ticket_claim')
@@ -231,16 +206,12 @@ export default {
             );
 
             await interaction.update({ components: [updatedRow] });
-            await channel.send({ content: `${creatorMention} тикет взят ${user}` });
-
-            logger.info(`Тикет взят администратором`, { adminId: user.id, channelId: channel.id });
+            await channel.send({ content: `${creatorMention}, тикет взял администратор ${user}!` });
         }
 
         // --- ЗАКРЫТЬ ТИКЕТ ---
         if (customId === 'ticket_close') {
             await interaction.reply({ content: '🔐 Тикет будет удален через 5 секунд...' });
-
-            logger.info(`Удаление тикета по кнопке`, { userId: user.id, channelId: channel.id });
 
             setTimeout(async () => {
                 try {
@@ -252,3 +223,4 @@ export default {
         }
     }
 };
+        
