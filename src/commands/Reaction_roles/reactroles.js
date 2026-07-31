@@ -16,7 +16,7 @@ import { getReactionRoleKey } from '../../utils/database/keys.js';
 const DASHBOARD_EPHEMERAL = MessageFlags.Ephemeral;
 const SELECT_OPTION_LABEL_LIMIT = 100;
 const SELECT_OPTION_DESCRIPTION_LIMIT = 100;
-const PANEL_BANNER_URL = 'https://cdn.discordapp.com/attachments/1510804375357100114/1532733520311746700/Picsart_26-07-31_19-55-31-655.jpg?ex=6a6decd4&is=6a6c9b54&hm=dbf4deed34e0dc7f9d48dd4ed4c98e583ba2c469026ff322a37cac136baacba5&';
+const PANEL_BANNER_URL = 'https://cdn.discordapp.com/attachments/1510804375357100114/1532861931160076368/IMG_20260801_042527.png?ex=6a6e646b&is=6a6d12eb&hm=e6bc0bebee54cde14a63e190c48232bc39ed1ba2d46791818606e63f38dcbcef&';
 
 function truncateText(value, maxLength) {
     const text = String(value ?? '');
