@@ -10,13 +10,13 @@ import {
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-// ===== НАСТРОЙКИ =====
-const ADMIN_ROLE_ID = '1510803430166495295'; // ID роли администрации
+const ADMIN_ROLE_ID = '1510803430166495295';
 const HEX_REGEX = /^#?[0-9A-Fa-f]{6}$/;
 
 export default {
+    // Включение слэш-команды для бота
     data: new SlashCommandBuilder()
-        .setName('поддержка_панель')
+        .setName('поддержка')
         .setDescription('Отправить панель поддержки сервера KING MOBILE')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option => 
@@ -37,32 +37,66 @@ export default {
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(true)),
 
-    async execute(interaction) {
-        // Если у вас единый хэндлер для всех интерактивов:
-        if (interaction.isButton()) {
-            await this.handleButton(interaction);
+    // Имя для текстовой команды (!поддержка)
+    name: 'поддержка',
+    description: 'Отправить панель поддержки сервера KING MOBILE',
+    usage: '!поддержка [заголовок] [текст] [цвет] [#канал]',
+
+    async execute(context, args) {
+        // Проверяем: вызвано через Слэш (Interaction) или Префикс (Message)
+        const isInteraction = context.isChatInputCommand?.() || context.isButton?.();
+
+        // 1. Если кликнули по кнопке
+        if (isInteraction && context.isButton()) {
+            await this.handleButton(context);
             return;
         }
 
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, true);
-        if (!deferSuccess) return;
+        let title, text, color, targetChannel;
 
-        const title = interaction.options.getString('заголовок');
-        const text = interaction.options.getString('текст');
-        let color = interaction.options.getString('цвет').trim();
-        const targetChannel = interaction.options.getChannel('канал');
+        if (isInteraction) {
+            // Данные из Слэш-команды
+            const deferSuccess = await InteractionHelper.safeDefer(context, true);
+            if (!deferSuccess) return;
 
-        // Валидация HEX-цвета
+            title = context.options.getString('заголовок');
+            text = context.options.getString('текст');
+            color = context.options.getString('цвет').trim();
+            targetChannel = context.options.getChannel('канал');
+        } else {
+            // Данные из обычного сообщения (!поддержка Заголовок Текст #FF00FF #канал)
+            const message = context;
+
+            if (!args || args.length < 4) {
+                return message.reply({
+                    content: `❌ **Неверный формат команды!**\nИспользование: \`!поддержка [заголовок] [текст] [цвет HEX] [#канал]\``
+                });
+            }
+
+            title = args[0];
+            text = args[1];
+            color = args[2].trim();
+            
+            // Находим канал по упоминанию или ID из 4 аргумента
+            targetChannel = message.mentions.channels.first() || message.guild.channels.cache.get(args[3]);
+            
+            if (!targetChannel) {
+                return message.reply({ content: '❌ Указанный канал не найден!' });
+            }
+        }
+
+        // Подгоняем и валидируем HEX цвет
         if (!HEX_REGEX.test(color)) {
-            await InteractionHelper.safeEditReply(interaction, {
-                content: `❌ Некорректный HEX-формат цвета! Используйте формат вида \`#FF6B00\` или \`3498db\`.`
-            });
+            const errorMsg = `❌ Некорректный HEX-формат цвета! Пример: \`#FF6B00\` или \`3498db\`.`;
+            if (isInteraction) {
+                await InteractionHelper.safeEditReply(context, { content: errorMsg });
+            } else {
+                await context.reply({ content: errorMsg });
+            }
             return;
         }
 
-        if (!color.startsWith('#')) {
-            color = `#${color}`;
-        }
+        if (!color.startsWith('#')) color = `#${color}`;
 
         try {
             const supportEmbed = new EmbedBuilder()
@@ -84,15 +118,21 @@ export default {
                 components: [row]
             });
 
-            await InteractionHelper.safeEditReply(interaction, {
-                content: `✅ Панель поддержки успешно отправлена в ${targetChannel}!`
-            });
+            const successMsg = `✅ Панель поддержки успешно отправлена в ${targetChannel}!`;
+            if (isInteraction) {
+                await InteractionHelper.safeEditReply(context, { content: successMsg });
+            } else {
+                await context.reply({ content: successMsg });
+            }
 
         } catch (error) {
             logger.error(`Ошибка при отправке панели поддержки:`, error);
-            await InteractionHelper.safeEditReply(interaction, {
-                content: `❌ Не удалось отправить панель в указанный канал.`
-            });
+            const failMsg = `❌ Не удалось отправить панель в канал.`;
+            if (isInteraction) {
+                await InteractionHelper.safeEditReply(context, { content: failMsg });
+            } else {
+                await context.reply({ content: failMsg });
+            }
         }
     },
 
@@ -100,7 +140,6 @@ export default {
     async handleButton(interaction) {
         const { customId, guild, user, channel, member } = interaction;
 
-        // --- СОЗДАНИЕ ТИКЕТА ---
         if (customId === 'ticket_create') {
             const deferSuccess = await InteractionHelper.safeDefer(interaction, true);
             if (!deferSuccess) return;
@@ -113,10 +152,7 @@ export default {
                     name: channelName,
                     type: ChannelType.GuildText,
                     permissionOverwrites: [
-                        {
-                            id: guild.id,
-                            deny: [PermissionFlagsBits.ViewChannel]
-                        },
+                        { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
                         {
                             id: user.id,
                             allow: [
@@ -177,7 +213,6 @@ export default {
             }
         }
 
-        // --- ВЗЯТЬ ОБРАЩЕНИЕ ---
         if (customId === 'ticket_claim') {
             const hasAdminRole = member?.roles?.cache?.has(ADMIN_ROLE_ID);
             const hasAdminPerms = member?.permissions?.has(PermissionFlagsBits.Administrator);
@@ -209,7 +244,6 @@ export default {
             await channel.send({ content: `${creatorMention}, тикет взял администратор ${user}!` });
         }
 
-        // --- ЗАКРЫТЬ ТИКЕТ ---
         if (customId === 'ticket_close') {
             await interaction.reply({ content: '🔐 Тикет будет удален через 5 секунд...' });
 
@@ -223,4 +257,3 @@ export default {
         }
     }
 };
-        
