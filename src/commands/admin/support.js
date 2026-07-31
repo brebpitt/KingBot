@@ -16,7 +16,7 @@ const HEX_REGEX = /^#?[0-9A-Fa-f]{6}$/;
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('поддержка')
+        .setName('поддержка_панель')
         .setDescription('Отправить панель поддержки сервера KING MOBILE')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option => 
