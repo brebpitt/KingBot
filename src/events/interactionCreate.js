@@ -19,7 +19,6 @@ import { resolveSlashAccessKey } from '../utils/messageAdapter.js';
 import { isCollectorManagedComponent } from '../utils/collectorComponents.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
 import { enforceDefaultCommandPermissions } from '../utils/permissionGuard.js'
-import { panelRolesCommand } from '../commands/admin/panelRoles.js';
 
 const COMMAND_ERROR_SUBTYPES = {
   warn: 'warn_failed',
