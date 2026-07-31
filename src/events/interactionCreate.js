@@ -449,7 +449,22 @@ export default {
           guildId: interaction.guildId,
           userId: interaction.user?.id
         });
-
+client.on('interactionCreate', async (interaction) => {
+    // 1. Вызов команды через слэш
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (command) await command.execute(interaction);
+    }
+    
+    // 2. Вызов через клик по кнопкам (ticket_create, ticket_claim, ticket_close)
+    else if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
+        const supportCommand = client.commands.get('поддержка');
+        if (supportCommand) {
+            await supportCommand.execute(interaction);
+        }
+    }
+});
+        
         try {
           await handleInteractionError(interaction, error, withTraceContext({
             type: 'interaction',
