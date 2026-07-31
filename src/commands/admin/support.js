@@ -35,6 +35,7 @@ export default {
                 .setDescription('Канал для отправки панели поддержки')
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(true)),
+    
 
     async execute(interaction) {
         // 1. Если кликнули по кнопке
