@@ -59,14 +59,27 @@ export default {
             const colorInput = interaction.options.getString('цвет') || '#0099FF';
             const targetChannel = interaction.options.getChannel('канал') || interaction.channel;
 
-            // Проверка прав на отправку в канал
-            if (targetChannel) {
-                const botPermissions = targetChannel.permissionsFor(interaction.guild.members.me);
-                if (!botPermissions.has(['SendMessages', 'EmbedLinks'])) {
-                    return interaction.reply({
-                        content: `❌ У бота нет прав отправлять сообщения или встраивать ссылки в канале ${targetChannel}!`,
-                        ephemeral: true
-                    });
+            // Проверка, что канал существует
+            if (!targetChannel) {
+                return interaction.reply({
+                    content: '❌ Канал не найден!',
+                    ephemeral: true
+                });
+            }
+
+            // Проверка прав на отправку в канал (только для текстовых каналов)
+            if (targetChannel.isTextBased?.()) {
+                try {
+                    const botPermissions = targetChannel.permissionsFor(interaction.guild.members.me);
+                    if (!botPermissions || !botPermissions.has(['SendMessages', 'EmbedLinks'])) {
+                        return interaction.reply({
+                            content: `❌ У бота нет прав отправлять сообщения или встраивать ссылки в канале ${targetChannel}!`,
+                            ephemeral: true
+                        });
+                    }
+                } catch (permError) {
+                    console.warn('Ошибка проверки прав:', permError);
+                    // Продолжаем выполнение, даже если не удалось проверить права
                 }
             }
 
@@ -133,16 +146,15 @@ export default {
         } catch (error) {
             console.error('Ошибка в команде эмбед:', error);
             
-            // Пытаемся ответить с ошибкой
             try {
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({
-                        content: `❌ Произошла ошибка: ${error.message}`,
+                        content: `❌ Произошла ошибка: ${error.message || 'Неизвестная ошибка'}`,
                         ephemeral: true
                     });
                 } else {
                     await interaction.reply({
-                        content: `❌ Произошла ошибка: ${error.message}`,
+                        content: `❌ Произошла ошибка: ${error.message || 'Неизвестная ошибка'}`,
                         ephemeral: true
                     });
                 }
