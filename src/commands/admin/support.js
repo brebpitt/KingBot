@@ -14,7 +14,6 @@ const ADMIN_ROLE_ID = '1510803430166495295';
 const HEX_REGEX = /^#?[0-9A-Fa-f]{6}$/;
 
 export default {
-    // Включение слэш-команды для бота
     data: new SlashCommandBuilder()
         .setName('поддержка')
         .setDescription('Отправить панель поддержки сервера KING MOBILE')
@@ -35,13 +34,9 @@ export default {
             option.setName('канал')
                 .setDescription('Канал для отправки панели поддержки')
                 .addChannelTypes(ChannelType.GuildText)
-                .setRequired(true)),
-
-    // Имя для текстовой команды (!поддержка)
-    name: 'поддержка',
-    description: 'Отправить панель поддержки сервера KING MOBILE',
-    usage: '!поддержка [заголовок] [текст] [цвет] [#канал]',
-
+                .setRequired(true),
+         ),
+    
     async execute(context, args) {
         // Проверяем: вызвано через Слэш (Interaction) или Префикс (Message)
         const isInteraction = context.isChatInputCommand?.() || context.isButton?.();
