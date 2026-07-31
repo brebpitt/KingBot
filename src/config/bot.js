@@ -25,7 +25,7 @@ export const botConfig = {
       {
         name: "Custom Status", // required by Discord API, not shown in the client
         state: "Играет в KING MOBILE",     // this is what people actually see
-        type: 4,               // Custom
+        type: 0,               // Custom
       },
     ],
   },
@@ -68,7 +68,7 @@ export const botConfig = {
 
     // Embed colors by application status.
     statusColors: {
-      pending: "#FFA500",
+      pending: "#FF00FF",
       approved: "#00FF00",
       denied: "#FF0000",
     },
